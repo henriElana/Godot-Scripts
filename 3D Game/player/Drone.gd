@@ -18,6 +18,9 @@ var my_collisionshape: CollisionShape
 
 var my_model: Spatial
 
+var target_model_rotation := Quat()
+const BANKING_ANGLE = 0.5
+
 var MOUSE_SENSITIVITY = 0.05
 
 # Called when the node enters the scene tree for the first time.
@@ -42,17 +45,23 @@ func process_input(delta):
 
 	var horizontal_input = Vector3()
 	var vertical_input = Vector3()
-
+	
+	target_model_rotation = Quat.IDENTITY
+	
 	if Input.is_action_pressed("ui_up"):
 		horizontal_input.z -= 1
+		target_model_rotation *= Quat(Vector3.LEFT, BANKING_ANGLE)
 	if Input.is_action_pressed("ui_down"):
 		horizontal_input.z += 1
+		target_model_rotation *= Quat(Vector3.LEFT, -BANKING_ANGLE)
 	if Input.is_action_pressed("ui_left"):
 		horizontal_input.x -= 1
+		target_model_rotation *= Quat(Vector3.BACK, BANKING_ANGLE)
 		if target_camera_localposition.x > -cam_side_offset:
 			target_camera_localposition.x -= increment
 	if Input.is_action_pressed("ui_right"):
 		horizontal_input.x += 1
+		target_model_rotation *= Quat(Vector3.BACK, -BANKING_ANGLE)
 		if target_camera_localposition.x < cam_side_offset:
 			target_camera_localposition.x += increment
 	if Input.is_action_pressed("ui_jump"):
@@ -91,7 +100,11 @@ func process_movement(delta):
 	
 	# Update camera local position
 	camera_localposition = camera_localposition.linear_interpolate(target_camera_localposition, ACCELERATION * delta)
-
+	
+	# Orient model
+	var model_rotation = Quat(my_model.transform.basis)
+	model_rotation = model_rotation.slerp(target_model_rotation, ACCELERATION * delta)
+	my_model.transform.basis = Basis(model_rotation)
 
 # Mouse input management
 func _input(event):
