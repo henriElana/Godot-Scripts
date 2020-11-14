@@ -16,9 +16,10 @@ var rng = RandomNumberGenerator.new()
 # random terrain probabilities
 var proba_cloud = 0.1
 var proba_roadblock = 0.2
-var proba_building = 0.7
+var proba_building = 0.5
 var proba_tower_if_not_building = 0.3
 var proba_zeroG = 0.2
+var proba_pivot = 0.7
 
 var m_cloud: Material = preload("res://materials/cloud.material")
 var m_plate: Material = preload("res://materials/gray_v30.material")
@@ -54,10 +55,16 @@ func build_plate():
 	for x in range(-min_included,max_excluded):
 		for z in range(-min_included,max_excluded):
 			add_clouds(x*cell_size,z*cell_size, plate)
-			if ((x%4 == 0) or (z%4 == 0)):
-				add_roadblocks(x*cell_size,z*cell_size, plate)
-			elif ((x%2 == 0) and (z%2 == 0)):
-				add_terrain(x*cell_size,z*cell_size, plate)
+			if not (x==0 and z==0):
+				if ((x%4 == 0) or (z%4 == 0)):
+					if ((x%8 == 0) and (z%8 == 0)):
+						add_pivot(x*cell_size,z*cell_size, plate)
+					elif x==z:
+						add_pivot(x*cell_size,z*cell_size, plate)
+					else:
+						add_roadblocks(x*cell_size,z*cell_size, plate)
+				elif ((x%2 == 0) and (z%2 == 0)):
+					add_terrain(x*cell_size,z*cell_size, plate)
 	
 	own_children_recursive(plate, plate)
 	
@@ -111,12 +118,16 @@ func add_building(x, z, parent):
 	var roll = rng.randf()
 	var m_building
 	var mat_roll = rng.randf()
-	if mat_roll<0.33:
+	if mat_roll<0.2:
 		m_building = m_building1
-	elif mat_roll<0.66:
+	elif mat_roll<0.4:
 		m_building = m_building2
-	else:
+	elif mat_roll<0.6:
 		m_building = m_building3
+	elif mat_roll<0.8:
+		m_building = m_building4
+	else:
+		m_building = m_building5
 		
 	if roll > proba_zeroG:
 		AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, 1.5*cell_size, z),
@@ -131,17 +142,48 @@ func add_building(x, z, parent):
 			AaPrism.random_free(Vector3(1, 2, 1), Vector3(x, 1.5*cell_size, z),
 					 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
 
+func add_pivot(x, z, parent):
+	var roll = rng.randf()
+	if roll < proba_pivot:
+		roll = rng.randf()
+		var m_building
+		var mat_roll = rng.randf()
+		if mat_roll<0.2:
+			m_building = m_building1
+		elif mat_roll<0.4:
+			m_building = m_building2
+		elif mat_roll<0.6:
+			m_building = m_building3
+		elif mat_roll<0.8:
+			m_building = m_building4
+		else:
+			m_building = m_building5
+		
+		var height_factor = rng.randi_range(1,3)+.1
+		
+		if roll > proba_zeroG:
+			AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
+					 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+			if coin_toss():
+				AaPrism.random_grounded(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
+						 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+		else:
+			AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
+					 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+			if coin_toss():
+				AaPrism.random_free(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
+						 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
 
 func add_trees(x, z, parent):
 	var _path = "res://materials/tree_"+str(rng.randi_range(1,5))+".material"
 	var m_tree: Material = load(_path)
 	var roll = rng.randf()
 	if roll > proba_zeroG:
-		for i in rng.randi_range(2,6):
+		for i in rng.randi_range(1,4):
 			AaPrism.random_grounded_small(Vector3(7, 2, 7), Vector3(x, 0.5*cell_size, z),
 				 Vector3(2.5*cell_size, cell_size, 2.5*cell_size), parent, m_tree)
 	else:
-		for i in rng.randi_range(2,6):
+		for i in rng.randi_range(1,4):
 			AaPrism.random_free_small(Vector3(7, 2, 7), Vector3(x, 0.5*cell_size, z),
 				 Vector3(2.5*cell_size, cell_size, 2.5*cell_size), parent, m_tree)
 
