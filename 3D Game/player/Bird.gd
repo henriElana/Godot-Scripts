@@ -16,6 +16,8 @@ var target_camera_localposition = Vector3(0.5, 0.5, 2.0)
 var cam_up_offset = 0.5
 var cam_down_offset = -0.5
 var cam_side_offset = 0.5
+var cam_forward_offset = 1.5
+var cam_back_offset = 2.5
 var increment = 0.1
 
 
@@ -54,9 +56,13 @@ func process_input(delta):
 	var input_movement_vector = Vector3()
 	if Input.is_action_pressed("ui_up"):
 		input_movement_vector.z -= 1
+		if target_camera_localposition.z < cam_back_offset:
+			target_camera_localposition.z += increment
 	is_braking = false
 	if Input.is_action_pressed("ui_down"):
 		is_braking = true
+		if target_camera_localposition.z > cam_forward_offset:
+			target_camera_localposition.z -= increment
 	if Input.is_action_pressed("ui_left"):
 		input_movement_vector.x -= 1
 		if target_camera_localposition.x > -cam_side_offset:
@@ -150,11 +156,11 @@ func _input(event):
 				
 		# Update target banking angle and camera x offset
 		if h_input > 0.01:
-			target_banking_angle = -0.5
+			target_banking_angle = -0.85
 			if target_camera_localposition.x < cam_side_offset:
 				target_camera_localposition.x += increment
 		elif h_input < -0.01:
-			target_banking_angle = 0.5
+			target_banking_angle = 0.85
 			if target_camera_localposition.x > -cam_side_offset:
 				target_camera_localposition.x -= increment
 		else:

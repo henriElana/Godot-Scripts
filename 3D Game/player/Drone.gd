@@ -12,6 +12,8 @@ var target_camera_localposition = Vector3(0.5, 0.5, 2.0)
 var cam_up_offset = 0.5
 var cam_down_offset = -0.5
 var cam_side_offset = 0.5
+var cam_forward_offset = 1.5
+var cam_back_offset = 2.5
 var increment = 0.1
 
 var my_collisionshape: CollisionShape
@@ -50,9 +52,13 @@ func process_input(delta):
 	
 	if Input.is_action_pressed("ui_up"):
 		horizontal_input.z -= 1
+		if target_camera_localposition.z < cam_back_offset:
+			target_camera_localposition.z += increment
 		target_model_rotation *= Quat(Vector3.LEFT, BANKING_ANGLE)
 	if Input.is_action_pressed("ui_down"):
 		horizontal_input.z += 1
+		if target_camera_localposition.z > cam_forward_offset:
+			target_camera_localposition.z -= increment
 		target_model_rotation *= Quat(Vector3.LEFT, -BANKING_ANGLE)
 	if Input.is_action_pressed("ui_left"):
 		horizontal_input.x -= 1
