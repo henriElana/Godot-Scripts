@@ -175,11 +175,21 @@ func add_pivot(x, z, parent):
 		var height_factor = rng.randi_range(1,3)+.1
 		
 		if roll > proba_zeroG:
-			AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
-					 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
 			if coin_toss():
+				# (1, 2, 1) grounded, (2, 1, 2) free
+				AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
+						 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+				if coin_toss():
+					AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
+							 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+			else:
+				# (1, 2, 1)  free, (2, 1, 2) grounded
 				AaPrism.random_grounded(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
 						 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+				if coin_toss():
+					AaPrism.random_free(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
+							 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+
 		else:
 			AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
 					 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
@@ -190,15 +200,9 @@ func add_pivot(x, z, parent):
 func add_trees(x, z, parent):
 	var _path = "res://materials/tree_"+str(rng.randi_range(1,5))+".material"
 	var m_tree: Material = load(_path)
-	var roll = rng.randf()
-	if roll > proba_zeroG:
-		for i in rng.randi_range(1,4):
-			AaPrism.random_grounded_small(Vector3(7, 2, 7), Vector3(x, 0.5*cell_size, z),
-				 Vector3(2.5*cell_size, cell_size, 2.5*cell_size), parent, m_tree)
-	else:
-		for i in rng.randi_range(1,4):
-			AaPrism.random_free_small(Vector3(7, 2, 7), Vector3(x, 0.5*cell_size, z),
-				 Vector3(2.5*cell_size, cell_size, 2.5*cell_size), parent, m_tree)
+	for i in rng.randi_range(1,4):
+		AaPrism.random_grounded_small(Vector3(7, 2, 7), Vector3(x, 0.5*cell_size, z),
+			 Vector3(2.5*cell_size, cell_size, 2.5*cell_size), parent, m_tree)
 
 
 func add_tower(x, z, parent):
