@@ -5,6 +5,7 @@ var plate_size: float
 var cell_size = 16
 var cell_per_plate_length = 39 # 4*n-1
 var plate = Spatial.new()
+var plate_max_altitude_in_cells = 7
 
 var plate_filename_base = "plate_a_size"
 var plate_number = 0
@@ -47,7 +48,7 @@ func coin_toss():
 	return toss
 
 func build_plate():
-	
+	add_invisible_roof(plate)
 	AaPrism.build_below(Vector3.ZERO, Vector3(plate_size, 1.0, plate_size),
 	 plate, m_plate)
 	var min_included = int(floor(cell_per_plate_length/2))
@@ -59,7 +60,7 @@ func build_plate():
 				if ((x%4 == 0) or (z%4 == 0)):
 					if ((x%8 == 0) and (z%8 == 0)):
 						add_pivot(x*cell_size,z*cell_size, plate)
-					elif x==z:
+					elif x==z or x==-z:
 						add_pivot(x*cell_size,z*cell_size, plate)
 					else:
 						add_roadblocks(x*cell_size,z*cell_size, plate)
@@ -80,11 +81,23 @@ func build_plate():
 	
 	# Clear plate before iteration !!
 	terminate_children(plate)
+
+
+func add_invisible_roof(parent_):
 	
+	var roof_: StaticBody = StaticBody.new()
+	parent_.add_child(roof_)
+	roof_.set_translation(Vector3(0.0, (plate_max_altitude_in_cells+1)*cell_size ,0.0)) # Local coordinates !
+	
+	var collision_shape_: CollisionShape = CollisionShape.new()
+	roof_.add_child(collision_shape_)
+	collision_shape_.shape = BoxShape.new()
+	collision_shape_.shape.set_extents(Vector3(0.5*plate_size, 1, 0.5*plate_size))
+
 
 func add_clouds(x, z, parent):
 	var roll = rng.randf()
-	var heigth = rng.randi_range(4,7)
+	var heigth = rng.randi_range(4,plate_max_altitude_in_cells)
 	
 	if roll < proba_cloud:
 		AaPrism.random_free(Vector3(3,3,3), Vector3(x, heigth*cell_size, z),
