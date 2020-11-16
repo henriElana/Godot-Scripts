@@ -123,8 +123,9 @@ func add_roadblocks(x, z, parent):
 func add_park(x, z, parent):
 	var _path = "res://materials/grass_"+str(rng.randi_range(1,5))+".material"
 	var m_grass: Material = load(_path)
+	# No collision with grass --> "false" parameter
 	AaPrism.build_above( Vector3(x, 0, z),
-			 Vector3(3*cell_size, 0.02*cell_size, 3*cell_size), parent, m_grass)
+			 Vector3(3*cell_size, 0.02*cell_size, 3*cell_size), parent, m_grass, false)
 
 
 func add_building(x, z, parent):
