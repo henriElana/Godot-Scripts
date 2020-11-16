@@ -4,13 +4,3 @@
 
 [node name="Level0" type="Spatial"]
 script = ExtResource( 2 )
-
-[node name="DirectionalLight" type="DirectionalLight" parent="."]
-transform = Transform( -0.32584, 0.874407, -0.3595, 0.517684, 0.483198, 0.706062, 0.791095, 0.0439562, -0.610112, 0, 0, 0 )
-light_color = Color( 0.82, 0.82, 0.82, 1 )
-light_energy = 0.2
-light_indirect_energy = 0.2
-shadow_enabled = true
-directional_shadow_blend_splits = true
-directional_shadow_depth_range = 1
-directional_shadow_max_distance = 150.0

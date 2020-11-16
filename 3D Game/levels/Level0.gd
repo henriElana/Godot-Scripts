@@ -2,8 +2,9 @@ extends Spatial
 
 
 # Declare member variables here.
-var player = preload("res://player/Drone.tscn")
+var player = preload("res://player/Bird.tscn")
 var terrain_manager_script = preload("res://levels/plate_juggler.gd")
+var light = preload("res://lights/Day.tscn")
 var terrain_manager
 
 
@@ -16,6 +17,8 @@ func _ready():
 	terrain_manager.set_script(terrain_manager_script)
 	terrain_manager._ready()
 	terrain_manager.set_player(player)
+	light = light.instance()
+	add_child(light)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
