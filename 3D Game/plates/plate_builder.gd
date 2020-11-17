@@ -100,11 +100,11 @@ func add_clouds(x, z, parent):
 	var heigth = rng.randi_range(4,plate_max_altitude_in_cells)
 	
 	if roll < proba_cloud:
-		AaPrism.random_free(Vector3(3,3,3), Vector3(x, heigth*cell_size, z),
-				 Vector3(2.5*cell_size, 2.5*cell_size, 2.5*cell_size), parent, m_cloud)
+		AaPrism.random_free(Vector3(3,3,3), Vector3(x, heigth*cell_size+0.2, z),
+				 Vector3(2.23*cell_size, 2.23*cell_size, 2.23*cell_size), parent, m_cloud)
 	if roll < 0.5*proba_cloud:
-		AaPrism.random_free(Vector3(3,3,3), Vector3(x, (heigth+1)*cell_size, z),
-				 Vector3(2.5*cell_size, 2.5*cell_size, 2.5*cell_size), parent, m_cloud)
+		AaPrism.random_free(Vector3(3,3,3), Vector3(x, (heigth+1)*cell_size+0.2, z),
+				 Vector3(2.23*cell_size, 2.23*cell_size, 2.23*cell_size), parent, m_cloud)
 
 
 func add_roadblocks(x, z, parent):
