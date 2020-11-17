@@ -101,10 +101,10 @@ func add_clouds(x, z, parent):
 	
 	if roll < proba_cloud:
 		AaPrism.random_free(Vector3(3,3,3), Vector3(x, heigth*cell_size, z),
-				 Vector3(2*cell_size, 2*cell_size, 2*cell_size), parent, m_cloud)
+				 Vector3(2.5*cell_size, 2.5*cell_size, 2.5*cell_size), parent, m_cloud)
 	if roll < 0.5*proba_cloud:
 		AaPrism.random_free(Vector3(3,3,3), Vector3(x, (heigth+1)*cell_size, z),
-				 Vector3(2*cell_size, 2*cell_size, 2*cell_size), parent, m_cloud)
+				 Vector3(2.5*cell_size, 2.5*cell_size, 2.5*cell_size), parent, m_cloud)
 
 
 func add_roadblocks(x, z, parent):
@@ -144,17 +144,37 @@ func add_building(x, z, parent):
 		m_building = m_building5
 		
 	if roll > proba_zeroG:
-		AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, 1.5*cell_size, z),
-				 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
 		if coin_toss():
+			# 121 first
+			AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, 1.5*cell_size, z),
+					 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
+			if coin_toss():
+				AaPrism.random_grounded(Vector3(2, 1, 2), Vector3(x, 1.5*cell_size, z),
+						 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
+			
+		else:
+			# 212 first
 			AaPrism.random_grounded(Vector3(2, 1, 2), Vector3(x, 1.5*cell_size, z),
 					 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
+			if coin_toss():
+				AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, 1.5*cell_size, z),
+						 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
+			
 	else:
-		AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, 1.5*cell_size, z),
-				 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
 		if coin_toss():
+			# 212 first
+			AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, 1.5*cell_size, z),
+					 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
+			if coin_toss():
+				AaPrism.random_free(Vector3(1, 2, 1), Vector3(x, 1.5*cell_size, z),
+						 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
+		else:
+			# 121 first
 			AaPrism.random_free(Vector3(1, 2, 1), Vector3(x, 1.5*cell_size, z),
 					 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
+			if coin_toss():
+				AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, 1.5*cell_size, z),
+						 Vector3(2.5*cell_size, 3*cell_size, 2.5*cell_size), parent, m_building)
 
 func add_pivot(x, z, parent):
 	var roll = rng.randf()
@@ -179,24 +199,32 @@ func add_pivot(x, z, parent):
 			if coin_toss():
 				# (1, 2, 1) grounded, (2, 1, 2) free
 				AaPrism.random_grounded(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
-						 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+						 Vector3(3.1*cell_size, 2*height_factor*cell_size, 3.1*cell_size), parent, m_building)
 				if coin_toss():
 					AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
-							 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+							 Vector3(3.1*cell_size, 2*height_factor*cell_size, 3.1*cell_size), parent, m_building)
 			else:
 				# (1, 2, 1)  free, (2, 1, 2) grounded
 				AaPrism.random_grounded(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
-						 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+						 Vector3(3.1*cell_size, 2*height_factor*cell_size, 3.1*cell_size), parent, m_building)
 				if coin_toss():
 					AaPrism.random_free(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
-							 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+							 Vector3(3.1*cell_size, 2*height_factor*cell_size, 3.1*cell_size), parent, m_building)
 
 		else:
 			AaPrism.random_free(Vector3(2, 1, 2), Vector3(x, height_factor*cell_size, z),
-					 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+					 Vector3(3.1*cell_size, 2*height_factor*cell_size, 3.1*cell_size), parent, m_building)
 			if coin_toss():
 				AaPrism.random_free(Vector3(1, 2, 1), Vector3(x, height_factor*cell_size, z),
-						 Vector3(1.9*cell_size, 2*height_factor*cell_size, 1.9*cell_size), parent, m_building)
+						 Vector3(3.1*cell_size, 2*height_factor*cell_size, 3.1*cell_size), parent, m_building)
+		
+		if coin_toss():
+			# add park, a bit lower
+			var _path = "res://materials/grass_"+str(rng.randi_range(1,5))+".material"
+			var m_grass: Material = load(_path)
+			# No collision with grass --> "false" parameter
+			AaPrism.build_above( Vector3(x, 0, z),
+					 Vector3(3*cell_size, 0.01*cell_size, 3*cell_size), parent, m_grass, false)
 
 func add_trees(x, z, parent):
 	var _path = "res://materials/tree_"+str(rng.randi_range(1,5))+".material"
@@ -210,12 +238,12 @@ func add_tower(x, z, parent):
 	var roll = rng.randf()
 	if roll > proba_zeroG:
 		AaPrism.build_above( Vector3(x, 0, z),
-				 Vector3(2.5*cell_size, rng.randi_range(2,9)*cell_size,
-				 2.5*cell_size), parent, m_tower)
+				 Vector3(2.4*cell_size, rng.randi_range(2,9)*cell_size,
+				 2.4*cell_size), parent, m_tower)
 	else:
 		AaPrism.build_above( Vector3(x, rng.randi_range(1,3)*cell_size, z),
-				 Vector3(2.5*cell_size, rng.randi_range(2,9)*cell_size,
-				 2.5*cell_size), parent, m_tower)
+				 Vector3(2.4*cell_size, rng.randi_range(2,9)*cell_size,
+				 2.4*cell_size), parent, m_tower)
 
 
 # Pick among house, trees, building
