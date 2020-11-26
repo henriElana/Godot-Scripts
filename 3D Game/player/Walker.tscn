@@ -2,6 +2,5 @@
 
 [ext_resource path="res://player/Walker.gd" type="Script" id=1]
 
-
-[node name="Wraith" type="KinematicBody"]
+[node name="Walker" type="KinematicBody"]
 script = ExtResource( 1 )
