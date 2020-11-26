@@ -20,9 +20,15 @@ var cam_forward_offset = 1.5
 var cam_back_offset = 2.5
 var increment = 0.1
 
-
+# Banking angle management
 var banking_angle = 0.0
 var target_banking_angle = 0.0
+var ui_bankleft = false
+var ui_bankright = false
+var mouse_bankleft = false
+var mouse_bankright = false
+
+
 
 var my_collisionshape: CollisionShape
 
@@ -53,6 +59,10 @@ func process_input(delta):
 	target_direction = Vector3()
 	var cam_xform = my_camera.get_global_transform()
 
+	# Left/right input banking angle management
+	ui_bankleft = false
+	ui_bankright = false
+	
 	var input_movement_vector = Vector3()
 	if Input.is_action_pressed("ui_up"):
 		input_movement_vector.z -= 1
@@ -65,10 +75,12 @@ func process_input(delta):
 			target_camera_localposition.z -= increment
 	if Input.is_action_pressed("ui_left"):
 		input_movement_vector.x -= 1
+		ui_bankleft = true
 		if target_camera_localposition.x > -cam_side_offset:
 			target_camera_localposition.x -= increment
 	if Input.is_action_pressed("ui_right"):
 		input_movement_vector.x += 1
+		ui_bankright = true
 		if target_camera_localposition.x < cam_side_offset:
 			target_camera_localposition.x += increment
 	if Input.is_action_pressed("ui_jump"):
@@ -127,6 +139,7 @@ func process_movement(delta):
 			current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 	
 	# Orient model
+	target_banking_angle = 0.75*(-(float(ui_bankleft) + float(mouse_bankleft)) + (float(ui_bankright) + float(mouse_bankright)))
 	banking_angle = lerp_angle(banking_angle, target_banking_angle, ACCELERATION * delta)
 	my_model.look_at(translation + current_velocity, (Vector3.UP).rotated(current_velocity.normalized(), banking_angle))
 	
@@ -155,12 +168,14 @@ func _input(event):
 				target_camera_localposition.y -= increment
 				
 		# Update target banking angle and camera x offset
+		mouse_bankleft = false
+		mouse_bankright = false
 		if h_input > 0.01:
-			target_banking_angle = -0.85
+			mouse_bankleft = true
 			if target_camera_localposition.x < cam_side_offset:
 				target_camera_localposition.x += increment
 		elif h_input < -0.01:
-			target_banking_angle = 0.85
+			mouse_bankright = true
 			if target_camera_localposition.x > -cam_side_offset:
 				target_camera_localposition.x -= increment
 		else:
