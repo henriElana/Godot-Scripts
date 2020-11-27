@@ -2,11 +2,13 @@ extends KinematicBody
 
 var target_direction := Vector3()
 var current_velocity: Vector3
+var h_current_velocity: Vector3
 const MAX_SPEED = 15
 const JUMP_SPEED = 20
 const ACCELERATION = 5
 const CAMERA_ACCELERATION = 2
 const GRAVITY = -30
+const ROTATION_SPEED = 5
 
 var MOUSE_SENSITIVITY = 0.05
 
@@ -108,10 +110,42 @@ func process_movement(delta):
 	target_direction.y = 0.0
 	target_direction = target_direction.normalized()
 	
+	# Movement management when already moving
+	if h_current_velocity.length_squared() > 2:
+		interpolate_velocity(delta)
+		
+		# Orient model
+		my_model.look_at(translation + h_current_velocity, Vector3.UP)
+	# Model still and no input
+	elif target_direction.length_squared() < 0.1:
+		manage_freefall(delta)
+	# When still an movement input, align model with target_direction befor moving
+	else:
+		# Sinus of angle from model front to target direction ; positive -> rotate left -> positive angle.
+		var model_forward = -my_model.global_transform.basis.z*Vector3.ONE
+		var sinus = model_forward.cross(target_direction).y
+		var angle = model_forward.angle_to(target_direction)
+		# is model aligned with target_direction ?
+		if angle < 0.05:
+			# Yes : start normal movement
+			interpolate_velocity(delta)
+			# Orient model
+			my_model.look_at(translation + h_current_velocity, Vector3.UP)
+		else:
+			# No : rotate model. sinus > 0 --> positive rotation
+			var rotation_sign = 2*int(sinus > 0)-1
+			my_model.rotate_y(rotation_sign*ROTATION_SPEED*delta)
+			manage_freefall(delta)
+	
+	
+	# Update camera local position
+	camera_localposition = camera_localposition.linear_interpolate(target_camera_localposition, CAMERA_ACCELERATION * delta)
+
+func interpolate_velocity(delta):
 	if current_velocity.y > -30:
 		current_velocity.y += delta*GRAVITY
 	
-	var h_current_velocity = current_velocity
+	h_current_velocity = current_velocity
 	h_current_velocity.y = 0.0
 	
 	var target_velocity = target_direction*MAX_SPEED
@@ -123,18 +157,16 @@ func process_movement(delta):
 	current_velocity.z = h_current_velocity.z
 	
 	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+
+func manage_freefall(delta):
+	# Just to be sure.
+	current_velocity.x = 0.0
+	current_velocity.z = 0.0
 	
-	# Orient model
-	if h_current_velocity.length_squared() > 0.01:
-		my_model.look_at(translation + h_current_velocity, Vector3.UP)
-	else:
-		my_model.look_at(translation - transform.basis.z*Vector3.ONE, Vector3.UP)
-	
-	
-	# Update camera local position
-	camera_localposition = camera_localposition.linear_interpolate(target_camera_localposition, CAMERA_ACCELERATION * delta)
-	
-	
+	if current_velocity.y > -30:
+		current_velocity.y += delta*GRAVITY
+		current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+
 
 func _input(event):
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
@@ -142,6 +174,9 @@ func _input(event):
 		var h_input = deg2rad(event.relative.x * MOUSE_SENSITIVITY * -1)
 		camera_mount.rotate_x(v_input)
 		self.rotate_y(h_input)
+		# Compensate model rotation when still
+		if h_current_velocity.length_squared() < 0.01:
+			my_model.rotate_y(-h_input)
 
 		var camera_rot = camera_mount.rotation_degrees
 		camera_rot.x = clamp(camera_rot.x, -70, 70)
