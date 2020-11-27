@@ -119,7 +119,7 @@ func process_movement(delta):
 	# Model still and no input
 	elif target_direction.length_squared() < 0.1:
 		manage_freefall(delta)
-	# When still an movement input, align model with target_direction befor moving
+	# When still an movement input, align model with target_direction before moving
 	else:
 		# Sinus of angle from model front to target direction ; positive -> rotate left -> positive angle.
 		var model_forward = -my_model.global_transform.basis.z*Vector3.ONE
