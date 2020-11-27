@@ -175,7 +175,7 @@ func _input(event):
 		camera_mount.rotate_x(v_input)
 		self.rotate_y(h_input)
 		# Compensate model rotation when still
-		if h_current_velocity.length_squared() < 0.01:
+		if target_direction.length_squared() < 0.1:
 			my_model.rotate_y(-h_input)
 
 		var camera_rot = camera_mount.rotation_degrees
