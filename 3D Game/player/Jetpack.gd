@@ -20,7 +20,8 @@ const MIN_STAMINA = -5
 const RECOVERY_RATE = 5
 var current_stamina = 0.0
 const DASH_COST = 30
-const DASH_FACTOR = 2.0
+const JUMP_COST = 30
+const DASH_FACTOR = 4.0
 
 var my_camera: Camera
 var camera_mount: Spatial
@@ -94,7 +95,7 @@ func process_input(delta):
 	# ----------------------------------
 
 	# Jumping
-	if is_on_floor():
+	if is_on_floor() or (current_stamina > 0.0):
 		if is_jump_pressed:
 			current_velocity.y = JUMP_SPEED
 
@@ -117,7 +118,7 @@ func process_movement(delta):
 		# Orient model
 		my_model.look_at(translation + h_current_velocity, Vector3.UP)
 	# Model still and no input
-	elif target_direction.length_squared() < 0.1:
+	elif target_direction.length_squared() < 0.5:
 		manage_freefall(delta)
 	# When still an movement input, align model with target_direction before moving
 	else:
@@ -290,6 +291,8 @@ func update_stamina(delta):
 		current_stamina += RECOVERY_RATE*delta
 	if current_stamina > MAX_STAMINA:
 		current_stamina = MAX_STAMINA
+	if is_jump_pressed:
+		current_stamina -= JUMP_COST*delta
 	if is_dash_pressed:
 		current_stamina -= DASH_COST*delta
 	if current_stamina < MIN_STAMINA:
