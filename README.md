@@ -5,4 +5,5 @@ Project guideline : one node per scene, everything else created from code.
 
 Procedurally pre-generated infinite city (9 swapped tiles).
 
-Third person characters : bird, drone, walker.
+Third person characters : bird, drone, walker, jetpack.
+first person character : ghost (no collision, zero gravity : level exploration).
