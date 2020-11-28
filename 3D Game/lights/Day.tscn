@@ -24,15 +24,13 @@ dof_blur_far_distance = 550.0
 dof_blur_far_transition = 75.0
 
 [node name="Day" type="DirectionalLight"]
-transform = Transform( -0.32584, 0.874407, -0.3595, 0.517684, 0.483198, 0.706062, 0.791095, 0.0439557, -0.610112, 0, 0, 0 )
+transform = Transform( -0.26805, 0.868868, -0.416195, 0.669422, 0.478656, 0.568123, 0.692837, -0.126325, -0.709942, 0.0045743, 0, 0.0111163 )
 light_color = Color( 0.82, 0.82, 0.82, 1 )
 light_energy = 0.2
 light_indirect_energy = 0.2
 shadow_enabled = true
 directional_shadow_mode = 0
-directional_shadow_blend_splits = true
-directional_shadow_depth_range = 1
-directional_shadow_max_distance = 150.0
+directional_shadow_max_distance = 250.0
 __meta__ = {
 "_editor_description_": ""
 }

@@ -14,6 +14,8 @@ background_mode = 2
 background_sky = SubResource( 1 )
 background_sky_orientation = Basis( 0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025 )
 background_energy = 0.45
+ambient_light_color = Color( 0.968627, 0.984314, 0.666667, 1 )
+ambient_light_energy = 0.1
 ambient_light_sky_contribution = 0.5
 fog_enabled = true
 fog_color = Color( 0.247059, 0.14902, 0.0666667, 1 )
@@ -31,13 +33,13 @@ dof_blur_far_distance = 550.0
 dof_blur_far_transition = 75.0
 
 [node name="Mars" type="DirectionalLight"]
-transform = Transform( -0.32584, 0.874407, -0.3595, 0.517684, 0.483198, 0.706062, 0.791095, 0.0439557, -0.610112, 0, 0, 0 )
+transform = Transform( -0.267103, 0.867417, -0.419814, 0.667485, 0.480747, 0.568636, 0.695068, -0.128335, -0.707397, 0, 0, 0 )
 light_color = Color( 0.996078, 0.984314, 0.678431, 1 )
-light_energy = 0.5
-light_indirect_energy = 0.0
+light_energy = 0.2
+light_indirect_energy = 0.2
 shadow_enabled = true
 directional_shadow_mode = 0
-directional_shadow_max_distance = 350.0
+directional_shadow_max_distance = 250.0
 __meta__ = {
 "_editor_description_": ""
 }
