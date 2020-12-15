@@ -48,7 +48,7 @@ func coin_toss():
 	return toss
 
 func build_plate():
-	add_invisible_roof(plate)
+	# add_invisible_roof(plate)
 	AaPrism.build_below(Vector3.ZERO, Vector3(plate_size, 1.0, plate_size),
 	 plate, m_plate)
 	var min_included = int(floor(cell_per_plate_length/2))
