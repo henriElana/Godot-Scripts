@@ -9,6 +9,8 @@ const ACCELERATION = 5
 const CAMERA_ACCELERATION = 2
 const GRAVITY = -30
 const ROTATION_SPEED = 5
+const MAX_ALTITUDE = 112 # 7 cells * 16 m/cell
+
 
 var MOUSE_SENSITIVITY = 0.05
 
@@ -153,6 +155,10 @@ func interpolate_velocity(delta):
 	if is_dash_pressed and (current_stamina > 0.0):
 		target_velocity *= DASH_FACTOR
 	
+	# Max altitude management
+	if translation.y > MAX_ALTITUDE:
+		target_velocity.y = -20
+		
 	h_current_velocity = h_current_velocity.linear_interpolate(target_velocity, ACCELERATION * delta)
 	current_velocity.x = h_current_velocity.x
 	current_velocity.z = h_current_velocity.z
