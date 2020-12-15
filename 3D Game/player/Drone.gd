@@ -4,6 +4,7 @@ var target_direction := Vector3()
 var current_velocity: Vector3
 const MAX_SPEED = 20
 const ACCELERATION = 2
+const MAX_ALTITUDE = 112 # 7 cells * 16 m/cell
 
 var my_camera: Camera
 var camera_mount: Spatial
@@ -101,6 +102,11 @@ func process_input(delta):
 func process_movement(delta):
 	
 	var target_velocity = target_direction*MAX_SPEED
+	
+	# Max altitude management
+	if translation.y > MAX_ALTITUDE:
+		target_velocity.y = -20
+		
 	current_velocity = current_velocity.linear_interpolate(target_velocity, ACCELERATION * delta)
 	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 	
