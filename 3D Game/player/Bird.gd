@@ -7,6 +7,7 @@ var current_speed: float
 const MIN_SPEED = 40
 const MAX_SPEED = 80
 const ACCELERATION = 1
+const MAX_ALTITUDE = 112 # 7 cells * 16 m/cell
 var is_braking = false
 
 var my_camera: Camera
@@ -113,31 +114,30 @@ func process_input(delta):
 	# ----------------------------------
 
 func process_movement(delta):
+	var target_velocity
 	if (target_direction != Vector3.ZERO):
 		if not is_braking:
-			var target_velocity = target_direction*MAX_SPEED
-			current_velocity = current_velocity.linear_interpolate(target_velocity, ACCELERATION * delta)
-			current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+			target_velocity = target_direction*MAX_SPEED
 		else:
-			var target_velocity = target_direction*MIN_SPEED*0.5
-			current_velocity = current_velocity.linear_interpolate(target_velocity, 2.0*ACCELERATION * delta)
-			current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+			target_velocity = target_direction*MIN_SPEED*0.5
 	else:
 		# Align movement to camera
 		var cam_xform = my_camera.get_global_transform()
-		var target_velocity = Vector3()
+		target_velocity = Vector3()
 		# Basis vectors are already normalized.
 		target_velocity -= cam_xform.basis.z
-		
 		if not is_braking:
 			target_velocity = target_velocity*MIN_SPEED
-			current_velocity = current_velocity.linear_interpolate(target_velocity, ACCELERATION * delta)
-			current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 		else:
 			target_velocity = target_velocity*MIN_SPEED*0.5
-			current_velocity = current_velocity.linear_interpolate(target_velocity, 2.0*ACCELERATION * delta)
-			current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+			
+	# Max altitude management
+	if translation.y > MAX_ALTITUDE:
+		target_velocity.y = -20
 	
+	current_velocity = current_velocity.linear_interpolate(target_velocity, 2.0*ACCELERATION * delta)
+	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+		
 	# Orient model
 	target_banking_angle = 0.75*(-(float(ui_bankleft) + float(mouse_bankleft)) + (float(ui_bankright) + float(mouse_bankright)))
 	banking_angle = lerp_angle(banking_angle, target_banking_angle, ACCELERATION * delta)
