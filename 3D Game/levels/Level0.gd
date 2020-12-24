@@ -2,9 +2,9 @@ extends Spatial
 
 
 # Declare member variables here.
-var player = preload("res://player/Bird.tscn")
+var player = preload("res://player/Drone.tscn")
 var terrain_manager_script = preload("res://levels/plate_juggler.gd")
-var light = preload("res://lights/Day.tscn")
+var light = preload("res://lights/Fog.tscn")
 var terrain_manager
 
 
