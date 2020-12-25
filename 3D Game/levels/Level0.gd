@@ -12,6 +12,7 @@ var terrain_manager
 func _ready():
 	player = player.instance()
 	add_child(player)
+	player.translate(Vector3.UP*10.0)
 	terrain_manager = Spatial.new()
 	add_child(terrain_manager)
 	terrain_manager.set_script(terrain_manager_script)
