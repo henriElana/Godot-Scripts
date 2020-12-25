@@ -7,7 +7,7 @@ var plate_size: float
 var cell_size = 16
 var cell_per_plate_length = 39 # 4*n-1
 var plate = Spatial.new()
-var plate_max_altitude_in_cells = 16
+var plate_max_altitude_in_cells = 10
 
 var plate_filename_base = "plate_a_size"
 var plate_number = 0
@@ -21,6 +21,7 @@ var proba_roadblock = 0.05
 var proba_building = 0.1
 var proba_rocks = 0.3
 var proba_pivot = 0.7
+var proba_cloud = 0.1
 
 var m_cloud: Material = preload("res://materials/cloud.material")
 var m_sky: Material = preload("res://materials/sky.material")
@@ -30,6 +31,9 @@ var m_building2: Material = preload("res://materials/gray_v60.material")
 var m_building3: Material = preload("res://materials/gray_v70.material")
 var m_building4: Material = preload("res://materials/gray_v80.material")
 var m_building5: Material = preload("res://materials/gray_v10.material")
+
+# terrain peak position
+var extremum: Vector3
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -48,7 +52,18 @@ func random_nb_under(value_ = 0.5):
 	return roll
 
 func build_plate():
-
+	# Plate parameters randomization
+	proba_building = 0.1*rng.randi_range(2,6)
+	proba_rocks = 0.1*rng.randi_range(2,6)
+	proba_pivot = 0.1*rng.randi_range(4,7)
+	
+	# Plate slope management
+	var extremum_x_ = rng.randf_range(-0.25*plate_size,0.25*plate_size)
+	var extremum_z_ = rng.randf_range(-0.25*plate_size,0.25*plate_size)
+	var sign_ = 2*(rng.randi_range(0,1)-0.5)
+	var extremum_y_ = sign_*0.2*(0.5*plate_size-max(abs(extremum_x_), abs(extremum_z_)))
+	extremum = Vector3(extremum_x_, extremum_y_, extremum_z_)
+	
 	var min_included = int(floor(cell_per_plate_length/2))
 	var max_excluded = int(ceil(cell_per_plate_length/2))
 	for x in range(-min_included,max_excluded):
@@ -65,6 +80,7 @@ func build_plate():
 						add_roadblocks(x*cell_size,z*cell_size, plate)
 				elif ((x%2 == 0) and (z%2 == 0)):
 					add_terrain(x*cell_size,z*cell_size, plate)
+					add_clouds(x*cell_size,z*cell_size, plate)
 	
 	own_children_recursive(plate, plate)
 	
@@ -82,18 +98,31 @@ func build_plate():
 	terminate_children(plate)
 
 
+func add_clouds(x, z, parent):
+	var roll = rng.randf()
+	var heigth = rng.randi_range(6,plate_max_altitude_in_cells)
+	
+	# No collision with clouds --> "false" parameter
+	if roll < proba_cloud:
+		AaPrism.random_free(Vector3(3,3,3), Vector3(x, heigth*cell_size, z),
+				 Vector3(5*cell_size, 3*cell_size, 5*cell_size), parent, m_cloud, false)
+	if roll < 0.5*proba_cloud:
+		AaPrism.random_free(Vector3(3,3,3), Vector3(x, (heigth+1.5)*cell_size, z),
+				 Vector3(5*cell_size, 3*cell_size, 5*cell_size), parent, m_cloud, false)
+
+
 func add_roadblocks(x, z, parent):
 	if random_nb_under(proba_roadblock):
 		var terrain_ = AaPrism.random_free_small(Vector3(7, 7, 7), Vector3(x, 0.5*cell_size, z),
-				 Vector3(cell_size, cell_size, cell_size), parent, m_cloud)
+				 Vector3(cell_size, cell_size, cell_size), parent, m_building4)
 		var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
 		var y_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
 		var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
-		var y_rise = 0.5*rng.randi_range(1,4)
+		var y_rise = 0.5*rng.randi_range(1,4) + calculate_height(extremum, Vector3(x, 0.0, z))
+		terrain_.translate(Vector3(0, y_rise, 0))
 		terrain_.rotate_x(x_rot_)
 		terrain_.rotate_y(y_rot_)
 		terrain_.rotate_z(z_rot_)
-		terrain_.translate(Vector3(0, y_rise, 0))
 
 
 func add_park(x, z, parent):
@@ -141,9 +170,9 @@ func add_trees(x, z, parent):
 		var xz_offset = 0.1*i-0.4
 		var _path = "res://materials/tree_"+str(rng.randi_range(1,5))+".material"
 		var m_tree: Material = load(_path)
-		AaPrism.random_grounded_small(Vector3(15, 15, 15), 
-			Vector3(xz_offset, 1.25*cell_size, xz_offset),
-			Vector3(2.5*cell_size, 2.5*cell_size, 2.5*cell_size), root_, m_tree)
+		AaPrism.random_grounded_small(Vector3(10, 15, 10), 
+			Vector3(xz_offset, 1.25*cell_size + 0.5*i, xz_offset),
+			Vector3(2.5*cell_size, 2.5*cell_size + i, 2.5*cell_size), root_, m_tree)
 	
 	return root_
 
@@ -164,13 +193,13 @@ func add_rocks(x, z, parent):
 func add_terrain(x, z, parent):
 	var terrain_
 	if random_nb_under(proba_building):
-		# add building, light grey base
+		# add building, medium grey base
 		terrain_ =  Spatial.new()
 		parent.add_child(terrain_)
 		terrain_.set_translation(Vector3(x, 0.0, z))
 		AaPrism.build_below(Vector3(0.0, 0.0, 0.0),
 			Vector3(4*cell_size, 4*cell_size, 4*cell_size),
-			terrain_, m_building4)
+			terrain_, m_building1)
 		add_building(0.0, 0.0, terrain_)
 	else:
 		if random_nb_under(proba_rocks):
@@ -197,14 +226,14 @@ func add_terrain(x, z, parent):
 
 	var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
 	var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
-	var y_rise = 0.5*rng.randi_range(0,4)
+	var y_rise = 0.5*rng.randi_range(0,4) + calculate_height(extremum, Vector3(x, 0.0, z))
+	terrain_.translate_object_local(Vector3(0, y_rise, 0))
 	if random_nb_under():
 		terrain_.rotate_x(x_rot_)
 		terrain_.rotate_z(z_rot_)
 	else:
 		terrain_.rotate_z(z_rot_)
 		terrain_.rotate_x(x_rot_)
-	terrain_.translate_object_local(Vector3(0, y_rise, 0))
 
 
 # Pick among building, trees, rocks
@@ -219,7 +248,8 @@ func add_pivot(x, z, parent):
 		
 		var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
 		var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
-		var y_rise = 0.5*rng.randi_range(0,4)
+		var y_rise = calculate_height(extremum, Vector3(x, 0.0, z)) - 2.0
+		terrain_.translate_object_local(Vector3(0, y_rise, 0))
 		if random_nb_under():
 			terrain_.rotate_x(x_rot_)
 			terrain_.rotate_z(z_rot_)
@@ -230,7 +260,21 @@ func add_pivot(x, z, parent):
 		if random_nb_under():
 			terrain_.rotate_y(deg2rad(45))
 		
-		terrain_.translate_object_local(Vector3(0, y_rise, 0))
+
+
+func calculate_height(extremum_, position_):
+	var extremum_xz_ = Vector3(extremum_.x, 0.0, extremum_.z)
+	var position_xz_ = Vector3(position_.x, 0.0, position_.z)
+	var distance_ = (extremum_xz_ - position_xz_).length()
+	var amplitude_ = 0.5*extremum_.y
+	var cosine_half_period = 0.5*plate_size - (max(abs(extremum_.x),abs(extremum_.z)))
+	var height_
+	if distance_ < cosine_half_period:
+		height_ = amplitude_*(1+cos(PI*distance_/cosine_half_period))
+	else:
+		height_ = 0.0
+	
+	return height_
 
 
 # Recursively change owner of all children
