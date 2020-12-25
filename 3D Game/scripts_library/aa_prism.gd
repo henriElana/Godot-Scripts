@@ -31,6 +31,8 @@ func build_centered(center_ = Vector3.ZERO, size_ = Vector3.ONE,
 	mesh_instance_.mesh = CubeMesh.new()
 	mesh_instance_.mesh.set_size(Vector3(size_.x, size_.y, size_.z))
 	mesh_instance_.mesh.set_material(mat_)
+	
+	return cube_
 
 
 # Create axis aligned prism within extents with given material. Local coordinates !
@@ -39,7 +41,7 @@ func build_extents(start_ = Vector3.ZERO, end_ = Vector3.ONE,
 	var center_ = 0.5*(start_ + end_)
 	var size_ = Vector3(abs(end_.x-start_.x), abs(end_.y-start_.y), abs(end_.z-start_.z))
 	
-	build_centered(center_, size_, parent_, mat_, has_collision_shape)
+	return build_centered(center_, size_, parent_, mat_, has_collision_shape)
 
 
 # Create axis aligned prism above center with given material. Local coordinates !
@@ -47,7 +49,7 @@ func build_above(base_center_ = Vector3.ZERO, size_ = Vector3.ONE,
 			 parent_ = self, mat_ = m_gray_v90, has_collision_shape = true):
 	var center_ = base_center_ + Vector3(0, 0.5*abs(size_.y), 0)
 	
-	build_centered(center_, size_, parent_, mat_, has_collision_shape)
+	return build_centered(center_, size_, parent_, mat_, has_collision_shape)
 	
 
 # Create axis aligned prism below center with given material. Local coordinates !
@@ -55,7 +57,7 @@ func build_below(top_center_ = Vector3.ZERO, size_ = Vector3.ONE,
 			 parent_ = self, mat_ = m_gray_v90, has_collision_shape = true):
 	var center_ = top_center_ + Vector3(0, -0.5*abs(size_.y), 0)
 	
-	build_centered(center_, size_, parent_, mat_, has_collision_shape)
+	return build_centered(center_, size_, parent_, mat_, has_collision_shape)
 
 
 
@@ -81,7 +83,7 @@ func random_grounded(cuts_ = Vector3.ONE,center_ = Vector3.ZERO, size_ = Vector3
 	center_.z += rng.randi_range(0,int(cuts_.z+1)-z_cells_)*cellsize_.z
 	
 	# Build !
-	build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
+	return build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
 
 
 
@@ -107,7 +109,7 @@ func random_grounded_small(cuts_ = Vector3.ONE,center_ = Vector3.ZERO, size_ = V
 	center_.z += rng.randi_range(0,int(cuts_.z+1)-z_cells_)*cellsize_.z
 	
 	# Build !
-	build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
+	return build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
 
 
 func random_free(cuts_ = Vector3.ONE,center_ = Vector3.ZERO, size_ = Vector3.ONE,
@@ -133,7 +135,7 @@ func random_free(cuts_ = Vector3.ONE,center_ = Vector3.ZERO, size_ = Vector3.ONE
 	center_.z += rng.randi_range(0,int(cuts_.z+1)-z_cells_)*cellsize_.z
 	
 	# Build !
-	build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
+	return build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
 
 
 
@@ -160,4 +162,4 @@ func random_free_small(cuts_ = Vector3.ONE, center_ = Vector3.ZERO, size_ = Vect
 	center_.z += rng.randi_range(0,int(cuts_.z+1)-z_cells_)*cellsize_.z
 	
 	# Build !
-	build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
+	return build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
