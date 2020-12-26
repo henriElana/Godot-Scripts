@@ -33,7 +33,7 @@ var m_building4: Material = preload("res://materials/gray_v80.material")
 var m_building5: Material = preload("res://materials/gray_v10.material")
 
 # terrain peak position
-var extremum: Vector3
+var extrema = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -58,11 +58,8 @@ func build_plate():
 	proba_pivot = 0.1*rng.randi_range(4,7)
 	
 	# Plate slope management
-	var extremum_x_ = rng.randf_range(-0.25*plate_size,0.25*plate_size)
-	var extremum_z_ = rng.randf_range(-0.25*plate_size,0.25*plate_size)
-	var sign_ = 2*(rng.randi_range(0,1)-0.5)
-	var extremum_y_ = sign_*0.2*(0.5*plate_size-max(abs(extremum_x_), abs(extremum_z_)))
-	extremum = Vector3(extremum_x_, extremum_y_, extremum_z_)
+	var number_of_extrema = rng.randi_range(1,6)
+	create_extrema(number_of_extrema)
 	
 	var min_included = int(floor(cell_per_plate_length/2))
 	var max_excluded = int(ceil(cell_per_plate_length/2))
@@ -96,6 +93,20 @@ func build_plate():
 	
 	# Clear plate before iteration !!
 	terminate_children(plate)
+	# Empty extrema array !
+	extrema.clear()
+
+
+func create_extrema(number=1):
+	# Plate slope management
+	for i in range(number):
+		var sign_ = 2*(rng.randi_range(0,1)-0.5)
+		var extremum_x_ = rng.randf_range(-0.25*plate_size,0.25*plate_size)
+		var extremum_z_ = rng.randf_range(-0.25*plate_size,0.25*plate_size)
+		var extremum_y_ = sign_*0.2*(0.5*plate_size-max(abs(extremum_x_), abs(extremum_z_)))
+		var extremum = Vector3(extremum_x_, extremum_y_, extremum_z_)
+		extrema.append(extremum)
+		print(extremum)
 
 
 func add_clouds(x, z, parent):
@@ -118,7 +129,9 @@ func add_roadblocks(x, z, parent):
 		var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
 		var y_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
 		var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
-		var y_rise = 0.5*rng.randi_range(1,4) + calculate_height(extremum, Vector3(x, 0.0, z))
+		var y_rise = 0.5*rng.randi_range(1,4)
+		for i in range(extrema.size()):
+			y_rise += calculate_height(extrema[i], Vector3(x, 0.0, z))
 		terrain_.translate(Vector3(0, y_rise, 0))
 		terrain_.rotate_x(x_rot_)
 		terrain_.rotate_y(y_rot_)
@@ -198,7 +211,7 @@ func add_terrain(x, z, parent):
 		parent.add_child(terrain_)
 		terrain_.set_translation(Vector3(x, 0.0, z))
 		AaPrism.build_below(Vector3(0.0, 0.0, 0.0),
-			Vector3(4*cell_size, 4*cell_size, 4*cell_size),
+			Vector3(4*cell_size, 8*cell_size, 4*cell_size),
 			terrain_, m_building1)
 		add_building(0.0, 0.0, terrain_)
 	else:
@@ -208,7 +221,7 @@ func add_terrain(x, z, parent):
 			parent.add_child(terrain_)
 			terrain_.set_translation(Vector3(x, 0.0, z))
 			AaPrism.build_below(Vector3(0.0, 0.0, 0.0),
-					Vector3(4*cell_size, 4*cell_size, 4*cell_size),
+					Vector3(4*cell_size, 8*cell_size, 4*cell_size),
 					terrain_, m_plate)
 			add_rocks(0.0, 0.0, terrain_)
 		else:
@@ -219,14 +232,16 @@ func add_terrain(x, z, parent):
 			parent.add_child(terrain_)
 			terrain_.set_translation(Vector3(x, 0.0, z))
 			AaPrism.build_below(Vector3(0.0, 0.0,0.0),
-					Vector3(4*cell_size, 4*cell_size, 4*cell_size),
+					Vector3(4*cell_size, 8*cell_size, 4*cell_size),
 					terrain_, m_grass)
 			add_trees(0.0, 0.0, terrain_)
 	
 
 	var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
 	var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
-	var y_rise = 0.5*rng.randi_range(0,4) + calculate_height(extremum, Vector3(x, 0.0, z))
+	var y_rise = 0.5*rng.randi_range(0,4)
+	for i in range(extrema.size()):
+		y_rise += calculate_height(extrema[i], Vector3(x, 0.0, z))
 	terrain_.translate_object_local(Vector3(0, y_rise, 0))
 	if random_nb_under():
 		terrain_.rotate_x(x_rot_)
@@ -248,7 +263,9 @@ func add_pivot(x, z, parent):
 		
 		var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
 		var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
-		var y_rise = calculate_height(extremum, Vector3(x, 0.0, z)) - 2.0
+		var y_rise = - 2.0
+		for i in range(extrema.size()):
+			y_rise += calculate_height(extrema[i], Vector3(x, 0.0, z))
 		terrain_.translate_object_local(Vector3(0, y_rise, 0))
 		if random_nb_under():
 			terrain_.rotate_x(x_rot_)
