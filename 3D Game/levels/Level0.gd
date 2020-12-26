@@ -2,7 +2,7 @@ extends Spatial
 
 
 # Declare member variables here.
-var player = preload("res://player/Drone.tscn")
+var player = preload("res://player/Jetpack.tscn")
 var terrain_manager_script = preload("res://levels/plate_juggler.gd")
 var light = preload("res://lights/Fog.tscn")
 var terrain_manager
@@ -12,7 +12,7 @@ var terrain_manager
 func _ready():
 	player = player.instance()
 	add_child(player)
-	player.translate(Vector3.UP*10.0)
+	player.translate(Vector3.UP*100.0)
 	terrain_manager = Spatial.new()
 	add_child(terrain_manager)
 	terrain_manager.set_script(terrain_manager_script)
