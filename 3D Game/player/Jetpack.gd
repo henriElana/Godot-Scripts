@@ -40,6 +40,8 @@ var my_collisionshape: CollisionShape
 
 var my_model: Spatial
 
+onready var edgecore = get_node("EdgeCore")
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	make_camera()
@@ -64,6 +66,8 @@ func process_input(delta):
 
 	is_jump_pressed = false
 	is_dash_pressed = false
+	
+	
 	if Input.is_action_pressed("ui_up"):
 		input_movement_vector.z -= 1
 		if target_camera_localposition.z < cam_back_offset:
@@ -90,6 +94,13 @@ func process_input(delta):
 			target_camera_localposition.y = cam_down_offset
 
 	input_movement_vector = input_movement_vector.normalized()
+
+	#swordfight management
+	if Input.is_action_pressed("ui_lmb"):
+		var angle_ = Vector3.FORWARD.angle_to(Vector3(input_movement_vector.x, 0.0, input_movement_vector.z))
+		if input_movement_vector.x >0.0:
+			angle_ *= -1
+		edgecore.start_cut(angle_)
 
 	# Basis vectors are already normalized.
 	target_direction += cam_xform.basis.x * input_movement_vector.x
