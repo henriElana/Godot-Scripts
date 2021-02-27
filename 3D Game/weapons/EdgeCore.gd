@@ -10,6 +10,8 @@ var core_max_forward_offset = 4.0
 var core_min_forward_offset = 1.5
 var core_current_offset
 
+var core_cutting_basis : Basis
+
 var model_growth_speed = 5
 var model_shrink_speed = 10
 
@@ -25,19 +27,21 @@ onready var sword_model = get_node("Arm/Sword/SwordModel")
 onready var sword_hitbox = get_node("Arm/Sword/SwordHitbox")
 
 
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	current_state = IS_IDLE
 	sword_model.scale = Vector3.ZERO
 	sword_model.set_visible(false)
-	sword_hitbox.monitoring = false
-	sword_hitbox.monitorable = false
+	sword_hitbox.set_deferred("monitoring", false)
+	sword_hitbox.set_deferred("monitorable", false)
 	sword.set_translation(Vector3(0.0, arm_length, 0.0))
 	
 
 
 func _physics_process(delta):
 	process_movement(delta)
+
 
 func process_movement(delta):
 	match current_state:
@@ -50,8 +54,8 @@ func process_movement(delta):
 				sword_model.scale += model_growth_speed*delta*Vector3.ONE
 			else:
 				sword_model.scale = Vector3.ONE
-				sword_hitbox.monitoring = true
-				sword_hitbox.monitorable = true
+				sword_hitbox.set_deferred("monitoring", true)
+				sword_hitbox.set_deferred("monitorable", true)
 				current_state = IS_CUTTING
 			
 		IS_CUTTING:
@@ -70,8 +74,8 @@ func process_movement(delta):
 			else:
 				sword_model.scale = Vector3.ZERO
 				sword_model.set_visible(false)
-				sword_hitbox.monitoring = false
-				sword_hitbox.monitorable = false
+				sword_hitbox.set_deferred("monitoring", false)
+				sword_hitbox.set_deferred("monitorable", false)
 				current_state = IS_IDLE
 				
 		IS_BOUNCING:
@@ -81,6 +85,7 @@ func process_movement(delta):
 				sword.set_rotation(Vector3(-cut_progress, 0.0, 0.0))
 			else:
 				current_state = IS_SHRINKING
+
 
 func start_cut(angle = 0.0):
 	if current_state == IS_IDLE:
@@ -102,16 +107,17 @@ func start_cut(angle = 0.0):
 		sword.set_rotation(Vector3.ZERO)
 		sword_model.set_visible(true)
 		current_state = IS_GROWING
-		
+
 
 func _on_SwordHitbox_body_entered(body):
 	if current_state == IS_CUTTING:
 		current_state = IS_BOUNCING
-		sword_hitbox.monitoring = false
-		sword_hitbox.monitorable = false
+		sword_hitbox.set_deferred("monitoring", false)
+		sword_hitbox.set_deferred("monitorable", false)
 	if body.has_method("take_hit"):
 		var push_ = body.translation() - to_global(sword_model.translation())
 		body.take_hit(damage, push_)
+
 
 func set_damage(dam):
 	damage = dam
