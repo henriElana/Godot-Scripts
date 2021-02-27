@@ -1,36 +1,38 @@
 [gd_scene load_steps=10 format=2]
 
-[ext_resource path="res://visual effects/circle.png" type="Texture" id=1]
+[ext_resource path="res://visual effects/fog.png" type="Texture" id=1]
 [ext_resource path="res://visual effects/Explosion.gd" type="Script" id=2]
 
-[sub_resource type="Gradient" id=3]
+[sub_resource type="Gradient" id=1]
 resource_local_to_scene = true
 offsets = PoolRealArray( 0, 0.903704, 0.933333, 1 )
 colors = PoolColorArray( 1, 1, 0, 1, 0.048623, 0.048623, 0.048623, 1, 0.118519, 0.118519, 0.118519, 1, 0, 0, 0, 0 )
 
-[sub_resource type="GradientTexture" id=4]
-gradient = SubResource( 3 )
+[sub_resource type="GradientTexture" id=2]
+gradient = SubResource( 1 )
 
-[sub_resource type="Curve" id=5]
+[sub_resource type="Curve" id=3]
 resource_local_to_scene = true
 max_value = 2.0
 _data = [ Vector2( 0, 2 ), 0.0, -0.143636, 0, 0, Vector2( 0.196203, 0.236364 ), -0.628409, -0.628409, 0, 0, Vector2( 0.550633, 0.146591 ), 0.0, 0.0, 0, 0, Vector2( 1, 0 ), -0.77803, 0.0, 0, 0 ]
 
-[sub_resource type="CurveTexture" id=6]
+[sub_resource type="CurveTexture" id=4]
 resource_local_to_scene = true
-curve = SubResource( 5 )
+curve = SubResource( 3 )
 
-[sub_resource type="ParticlesMaterial" id=7]
+[sub_resource type="ParticlesMaterial" id=5]
 resource_local_to_scene = true
+direction = Vector3( 0, 0, 1 )
 spread = 180.0
+gravity = Vector3( 0, 0, 0 )
 initial_velocity = 10.0
-initial_velocity_random = 0.2
-damping = 10.0
+initial_velocity_random = 1.0
 damping_random = 0.2
-scale_curve = SubResource( 6 )
-color_ramp = SubResource( 4 )
+scale_random = 1.0
+scale_curve = SubResource( 4 )
+color_ramp = SubResource( 2 )
 
-[sub_resource type="SpatialMaterial" id=8]
+[sub_resource type="SpatialMaterial" id=6]
 flags_transparent = true
 flags_unshaded = true
 flags_do_not_receive_shadows = true
@@ -42,15 +44,18 @@ particles_anim_v_frames = 1
 particles_anim_loop = false
 albedo_texture = ExtResource( 1 )
 
-[sub_resource type="QuadMesh" id=9]
+[sub_resource type="QuadMesh" id=7]
 resource_local_to_scene = true
-material = SubResource( 8 )
+material = SubResource( 6 )
 
 [node name="Explosion" type="Particles"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 )
 emitting = false
-amount = 10
+amount = 15
+lifetime = 0.2
 one_shot = true
 explosiveness = 1.0
-process_material = SubResource( 7 )
-draw_pass_1 = SubResource( 9 )
+process_material = SubResource( 5 )
+draw_pass_1 = SubResource( 7 )
 script = ExtResource( 2 )
+delay = 0.3
