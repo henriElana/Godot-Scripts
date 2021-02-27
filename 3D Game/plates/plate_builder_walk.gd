@@ -124,8 +124,22 @@ func add_clouds(x, z, parent):
 
 func add_roadblocks(x, z, parent):
 	if random_nb_under(proba_roadblock):
-		var terrain_ = AaPrism.random_free_small(Vector3(7, 7, 7), Vector3(x, 0.5*cell_size, z),
-				 Vector3(cell_size, cell_size, cell_size), parent, m_building4)
+		
+		var m_building
+		var mat_roll = rng.randf()
+		if mat_roll<0.2:
+			m_building = m_building1
+		elif mat_roll<0.4:
+			m_building = m_building2
+		elif mat_roll<0.6:
+			m_building = m_building3
+		elif mat_roll<0.8:
+			m_building = m_building4
+		else:
+			m_building = m_building5
+		
+		var terrain_ = AaPrism.random_free_small(Vector3(4, 4, 4), Vector3(x, cell_size, z),
+				 Vector3(2*cell_size, 2*cell_size, 2*cell_size), parent, m_building)
 		var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
 		var y_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
 		var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(20)
@@ -136,14 +150,6 @@ func add_roadblocks(x, z, parent):
 		terrain_.rotate_x(x_rot_)
 		terrain_.rotate_y(y_rot_)
 		terrain_.rotate_z(z_rot_)
-
-
-func add_park(x, z, parent):
-	var _path = "res://materials/grass_"+str(rng.randi_range(1,5))+".material"
-	var m_grass: Material = load(_path)
-	# No collision with grass --> "false" parameter
-	AaPrism.build_above( Vector3(x, 0, z),
-			 Vector3(3*cell_size, 0.02*cell_size, 3*cell_size), parent, m_grass, false)
 
 
 func add_building(x, z, parent):
@@ -164,12 +170,17 @@ func add_building(x, z, parent):
 	else:
 		m_building = m_building5
 	var height_factor_ = rng.randi_range(1,3)
-	AaPrism.random_grounded(Vector3(4, 9, 4), Vector3(0.0, 1.25*cell_size*height_factor_, 0.0),
+	AaPrism.random_grounded_small(Vector3(4, 9, 4), Vector3(0.0, 1.25*cell_size*height_factor_, 0.0),
 			 Vector3(2.5*cell_size, 2.5*cell_size*height_factor_, 2.5*cell_size), root_, m_building)
 	if random_nb_under():
-		AaPrism.random_grounded(Vector3(4, 9, 4), Vector3(0.0, 1.25*cell_size*height_factor_, 0.0),
+		AaPrism.random_grounded_small(Vector3(4, 9, 4), Vector3(0.0, 1.25*cell_size*height_factor_, 0.0),
 				 Vector3(2.5*cell_size, 2.5*cell_size*height_factor_, 2.5*cell_size), root_, m_building)
-	
+		if random_nb_under():
+			AaPrism.random_free_small(Vector3(4, 4, 4), Vector3(0.0, 1.25*cell_size*height_factor_, 0.0),
+					 Vector3(2.5*cell_size, 2.5*cell_size*height_factor_, 2.5*cell_size), root_, m_building)
+			if random_nb_under():
+				AaPrism.random_free_small(Vector3(4, 4, 4), Vector3(0.0, 1.25*cell_size*height_factor_, 0.0),
+						 Vector3(2.5*cell_size, 2.5*cell_size*height_factor_, 2.5*cell_size), root_, m_building)
 	return root_
 
 
@@ -178,14 +189,14 @@ func add_trees(x, z, parent):
 	parent.add_child(root_)
 	root_.set_translation(Vector3(x, 0.0, z))
 	
-	for i in rng.randi_range(1,7):
+	for i in rng.randi_range(1,13):
 		# Keep textures from overlapping by offseting models :
-		var xz_offset = 0.1*i-0.4
+		var xz_offset = 0.1*i-0.7
 		var _path = "res://materials/tree_"+str(rng.randi_range(1,5))+".material"
 		var m_tree: Material = load(_path)
-		AaPrism.random_grounded_small(Vector3(10, 15, 10), 
-			Vector3(xz_offset, 1.25*cell_size + 0.5*i, xz_offset),
-			Vector3(2.5*cell_size, 2.5*cell_size + i, 2.5*cell_size), root_, m_tree)
+		AaPrism.random_grounded_small(Vector3(18, 18, 18), 
+			Vector3(xz_offset, 1.95*cell_size + 0.5*i, xz_offset),
+			Vector3(3.9*cell_size, 3.9*cell_size + i, 3.9*cell_size), root_, m_tree)
 	
 	return root_
 
@@ -196,8 +207,8 @@ func add_rocks(x, z, parent):
 	root_.set_translation(Vector3(x, 0.0, z))
 	
 	for i in rng.randi_range(1,6):
-		AaPrism.random_grounded_small(Vector3(7, 19, 7), Vector3(0.0, 1.25*cell_size, 0.0),
-			 Vector3(2.5*cell_size, 2.5*cell_size, 2.5*cell_size), root_, m_plate)
+		AaPrism.random_grounded_small(Vector3(9, 12, 9), Vector3(0.0, 2*cell_size, 0.0),
+			 Vector3(4*cell_size, 4*cell_size, 4*cell_size), root_, m_plate)
 	
 	return root_
 
