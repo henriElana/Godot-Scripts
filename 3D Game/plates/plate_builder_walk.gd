@@ -9,6 +9,8 @@ var cell_per_plate_length = 39 # 4*n-1
 var plate = Spatial.new()
 var plate_max_altitude_in_cells = 10
 
+export var use_random_plate_tilt = false
+
 var plate_filename_base = "plate_a_size"
 var plate_number = 0
 
@@ -248,18 +250,20 @@ func add_terrain(x, z, parent):
 			add_trees(0.0, 0.0, terrain_)
 	
 
-	var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
-	var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
 	var y_rise = 0.5*rng.randi_range(0,4)
 	for i in range(extrema.size()):
 		y_rise += calculate_height(extrema[i], Vector3(x, 0.0, z))
 	terrain_.translate_object_local(Vector3(0, y_rise, 0))
-	if random_nb_under():
-		terrain_.rotate_x(x_rot_)
-		terrain_.rotate_z(z_rot_)
-	else:
-		terrain_.rotate_z(z_rot_)
-		terrain_.rotate_x(x_rot_)
+	
+	if use_random_plate_tilt:
+		var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
+		var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
+		if random_nb_under():
+			terrain_.rotate_x(x_rot_)
+			terrain_.rotate_z(z_rot_)
+		else:
+			terrain_.rotate_z(z_rot_)
+			terrain_.rotate_x(x_rot_)
 
 
 # Pick among building, trees, rocks
@@ -272,18 +276,20 @@ func add_pivot(x, z, parent):
 		terrain_.set_translation(Vector3(x, 0.0, z))
 		add_building(0.0, 0.0, terrain_)
 		
-		var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
-		var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
 		var y_rise = - 2.0
 		for i in range(extrema.size()):
 			y_rise += calculate_height(extrema[i], Vector3(x, 0.0, z))
 		terrain_.translate_object_local(Vector3(0, y_rise, 0))
-		if random_nb_under():
-			terrain_.rotate_x(x_rot_)
-			terrain_.rotate_z(z_rot_)
-		else:
-			terrain_.rotate_z(z_rot_)
-			terrain_.rotate_x(x_rot_)
+		
+		if use_random_plate_tilt:
+			var x_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
+			var z_rot_ = (rng.randi_range(1,7)-4)*deg2rad(1)
+			if random_nb_under():
+				terrain_.rotate_x(x_rot_)
+				terrain_.rotate_z(z_rot_)
+			else:
+				terrain_.rotate_z(z_rot_)
+				terrain_.rotate_x(x_rot_)
 		
 		if random_nb_under():
 			terrain_.rotate_y(deg2rad(45))
