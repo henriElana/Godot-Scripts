@@ -17,6 +17,9 @@ func _ready():
 func build_centered(center_ = Vector3.ZERO, size_ = Vector3.ONE,
 			 parent_ = self, mat_ = m_gray_v90, has_collision_shape = true):
 	var cube_: StaticBody = StaticBody.new()
+	# Set collision layer and mask
+	setup_terrain_layer_mask(cube_)
+	
 	parent_.add_child(cube_)
 	cube_.set_translation(center_) # Local coordinates !
 	
@@ -163,3 +166,8 @@ func random_free_small(cuts_ = Vector3.ONE, center_ = Vector3.ZERO, size_ = Vect
 	
 	# Build !
 	return build_centered(center_, final_cellsize_, parent_, mat_, has_collision_shape)
+
+
+func setup_terrain_layer_mask(_ob):
+	_ob.set_collision_layer(2)
+	_ob.set_collision_mask(13)
