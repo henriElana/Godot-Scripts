@@ -1,0 +1,136 @@
+[gd_scene load_steps=15 format=2]
+
+[ext_resource path="res://HUD/GUI.gd" type="Script" id=1]
+[ext_resource path="res://HUD/LifeBar.tscn" type="PackedScene" id=2]
+[ext_resource path="res://HUD/EnergyBar.tscn" type="PackedScene" id=3]
+[ext_resource path="res://HUD/GreenCounter.tscn" type="PackedScene" id=4]
+[ext_resource path="res://HUD/RedCounter.tscn" type="PackedScene" id=5]
+[ext_resource path="res://HUD/Message.tscn" type="PackedScene" id=6]
+[ext_resource path="res://HUD/Xolonium-Regular.ttf" type="DynamicFontData" id=7]
+[ext_resource path="res://materials/m_red.material" type="Material" id=8]
+[ext_resource path="res://materials/m_green.material" type="Material" id=9]
+
+[sub_resource type="DynamicFont" id=1]
+resource_local_to_scene = true
+size = 50
+outline_size = 2
+outline_color = Color( 0.0470588, 0.113725, 0.682353, 1 )
+font_data = ExtResource( 7 )
+
+[sub_resource type="Environment" id=2]
+background_mode = 6
+background_energy = 0.2
+ambient_light_color = Color( 0.996078, 0.992157, 0.992157, 1 )
+ambient_light_energy = 0.2
+
+[sub_resource type="World" id=3]
+environment = SubResource( 2 )
+
+[sub_resource type="SphereMesh" id=4]
+material = ExtResource( 9 )
+radius = 0.4
+height = 1.0
+radial_segments = 4
+rings = 1
+is_hemisphere = true
+
+[sub_resource type="SphereMesh" id=5]
+material = ExtResource( 8 )
+radius = 0.2
+height = 0.4
+radial_segments = 8
+rings = 3
+
+[node name="GUI" type="MarginContainer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 20.0
+margin_top = 20.0
+margin_right = -20.0
+margin_bottom = -20.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+margin_right = 984.0
+margin_bottom = 560.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+margin_right = 984.0
+margin_bottom = 37.0
+
+[node name="GreenCounter" parent="VBoxContainer/HBoxContainer" instance=ExtResource( 4 )]
+margin_right = 325.0
+margin_bottom = 37.0
+size_flags_horizontal = 3
+
+[node name="Bars" type="VBoxContainer" parent="VBoxContainer/HBoxContainer"]
+margin_left = 329.0
+margin_right = 654.0
+margin_bottom = 37.0
+size_flags_horizontal = 3
+
+[node name="LifeBar" parent="VBoxContainer/HBoxContainer/Bars" instance=ExtResource( 2 )]
+margin_right = 325.0
+rect_scale = Vector2( 1, 1 )
+
+[node name="EnergyBar" parent="VBoxContainer/HBoxContainer/Bars" instance=ExtResource( 3 )]
+margin_top = 14.0
+margin_right = 325.0
+margin_bottom = 24.0
+
+[node name="RedCounter" parent="VBoxContainer/HBoxContainer" instance=ExtResource( 5 )]
+margin_left = 658.0
+margin_right = 984.0
+margin_bottom = 37.0
+size_flags_horizontal = 3
+
+[node name="Message" parent="VBoxContainer" instance=ExtResource( 6 )]
+anchor_right = 0.0
+anchor_bottom = 0.0
+margin_top = 41.0
+margin_right = 984.0
+margin_bottom = 356.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_fonts/font = SubResource( 1 )
+autowrap = true
+
+[node name="ViewportContainer" type="ViewportContainer" parent="VBoxContainer"]
+margin_left = 784.0
+margin_top = 360.0
+margin_right = 984.0
+margin_bottom = 560.0
+rect_min_size = Vector2( 200, 200 )
+size_flags_horizontal = 8
+stretch = true
+
+[node name="Viewport" type="Viewport" parent="VBoxContainer/ViewportContainer"]
+size = Vector2( 200, 200 )
+own_world = true
+world = SubResource( 3 )
+transparent_bg = true
+handle_input_locally = false
+render_target_update_mode = 3
+
+[node name="Arrow" type="Spatial" parent="VBoxContainer/ViewportContainer/Viewport"]
+
+[node name="MeshInstance" type="MeshInstance" parent="VBoxContainer/ViewportContainer/Viewport/Arrow"]
+transform = Transform( 1, 0, 0, 0, -1.62921e-07, 1, 0, -1, -1.62921e-07, 0, 0, 0 )
+mesh = SubResource( 4 )
+material/0 = null
+
+[node name="MeshInstance2" type="MeshInstance" parent="VBoxContainer/ViewportContainer/Viewport/Arrow"]
+mesh = SubResource( 5 )
+material/0 = null
+
+[node name="CameraB" type="Camera" parent="VBoxContainer/ViewportContainer/Viewport"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1 )
+projection = 1
+size = 2.0
+
+[node name="l_Tween" type="Tween" parent="."]
+
+[node name="e_Tween" type="Tween" parent="."]

@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://HUD/Counter.tscn" type="PackedScene" id=1]
+
+
+[node name="GreenCounter" instance=ExtResource( 1 )]
+margin_right = 60.0
+margin_bottom = 50.0
+
+[node name="Background" parent="." index="0"]
+margin_right = 30.0
+margin_bottom = 50.0
+
+[node name="Value" parent="Background" index="0"]
+self_modulate = Color( 0, 1, 0, 1 )

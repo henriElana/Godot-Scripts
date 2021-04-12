@@ -1,0 +1,41 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://HUD/square64.png" type="Texture" id=1]
+[ext_resource path="res://HUD/Xolonium-Regular.ttf" type="DynamicFontData" id=2]
+
+[sub_resource type="DynamicFont" id=1]
+size = 30
+font_data = ExtResource( 2 )
+
+[node name="Counter" type="CenterContainer"]
+margin_right = 60.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Background" type="NinePatchRect" parent="."]
+self_modulate = Color( 0, 0, 0, 1 )
+margin_left = 15.0
+margin_top = 7.0
+margin_right = 45.0
+margin_bottom = 33.0
+rect_min_size = Vector2( 30, 25 )
+texture = ExtResource( 1 )
+patch_margin_left = 12
+patch_margin_top = 13
+patch_margin_right = 14
+patch_margin_bottom = 13
+
+[node name="Value" type="Label" parent="."]
+margin_left = 9.0
+margin_top = 1.0
+margin_right = 51.0
+margin_bottom = 38.0
+custom_fonts/font = SubResource( 1 )
+text = "10"
+align = 1
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
