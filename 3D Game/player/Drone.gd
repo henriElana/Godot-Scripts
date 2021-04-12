@@ -231,3 +231,7 @@ func update_camera():
 		my_camera.set_translation(camera_mount.to_local(result.position))
 	else:
 		my_camera.set_translation(camera_localposition)
+
+# Get goal arrow:
+func get_arrow(_goal_position):
+	return my_camera.to_local(_goal_position-translation)
