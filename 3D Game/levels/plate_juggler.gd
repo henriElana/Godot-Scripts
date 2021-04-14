@@ -3,7 +3,7 @@ extends Spatial
 # Infinite level manager, uses prebuilt plates
 
 # Declare member variables here.
-var plate_size = 624 # !!!  See plate name for size !!!!!!!!!!!!!!!!!!!!! update path !!!
+var plate_size = 640 # !!!  See plate name for size !!!!!!!!!!!!!!!!!!!!! update path !!!
 export var plates = [] # Uses nine plates ! array of PackedScenes
 var plates_path = "res://plates/plate_a_size624_nb_"	# Plates path without number !! update size in plate_size !!!
 
