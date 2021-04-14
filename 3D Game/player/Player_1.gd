@@ -1,11 +1,16 @@
 extends KinematicBody
 
+var game_manager
+
 # States manager
 enum State {GROUNDED,AIRBORNE,SHOCK,DODGE,CLIMB,FOCUS,RUSH,ATTACK}
 var current_state = State.GROUNDED
 
 var directional_input := Vector3()
+var last_dir_input := Vector3()
 var aim_input := Vector3()
+var dodge_input := Vector3()
+var is_dodge_started = false
 var is_jump_input = false
 var is_dash_input = false
 var is_attack_input = false
@@ -44,12 +49,18 @@ var MOUSE_SENSITIVITY = 0.05
 
 const MAX_HEALTH = 100
 var current_health = 100
-const MAX_STAMINA = 100
-const MIN_STAMINA = -5
+const MAX_ENERGY = 100
 const RECOVERY_RATE = 5
-var current_stamina = 100
-const DASH_COST = 30
+var current_energy = 100
+const DASH_COST = -30
 const DASH_FACTOR = 2.0
+const DODGE_COST = -10.0
+const DODGE_SPEED = 30
+const DODGE_JUMP_SPEED = 10.0
+var dodge_roll_angle = 0.0
+var dodge_initial_facing = Vector3.ZERO
+var actions_timer :Timer
+var attacks_timer :Timer
 
 var my_camera: Camera
 var camera_mount: Spatial
@@ -70,15 +81,17 @@ var my_model: Spatial
 var climb_ray: RayCast
 
 # Weapons
+var gun_mount: Spatial
 var aiming_ray: RayCast
-var cc_hitbox: CollisionShape
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	game_manager = get_parent()
 	make_camera()
 	make_collision_shape()
 	make_model()
 	make_climb_ray()
+	make_timers()
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -92,7 +105,7 @@ func _physics_process(delta):
 		State.SHOCK:
 			pass
 		State.DODGE:
-			pass
+			process_dodge_movement(delta)
 		State.CLIMB:
 			process_climb_movement(delta)
 		State.FOCUS:
@@ -102,7 +115,9 @@ func _physics_process(delta):
 		State.ATTACK:
 			pass
 	update_camera(delta)
-	update_stamina_health(delta)
+	update_energy_health(delta)
+	game_manager.update_energy(current_energy)
+	game_manager.update_life(current_health)
 
 
 func process_input(delta):
@@ -153,7 +168,8 @@ func process_input(delta):
 	directional_input.y = 0.0
 	directional_input = directional_input.normalized()
 	# ----------------------------------
-
+	if directional_input != Vector3.ZERO:
+		last_dir_input = directional_input
 
 	# Capturing/Freeing the cursor
 	if Input.is_action_just_pressed("ui_cancel"):
@@ -193,8 +209,21 @@ func process_grounded_movement(delta):
 				var rotation_sign = 2*int(sinus > 0)-1
 				my_model.rotate_y(rotation_sign*ROTATION_SPEED*delta)
 				
+				# But can still dodge !
+				if is_dash_input:
+					if current_energy > 0.0:
+						# Can dash/shoot or dodge/rush, depending on config
+						if !is_shoot_not_rush_config:
+							dodge_input = directional_input
+							is_dodge_started = false
+							edit_energy(DODGE_COST)
+							current_state = State.DODGE
+				
 		else:
 			interpolate_velocity(delta)
+			
+			# Orient model
+			my_model.look_at(translation + last_dir_input, Vector3.UP)
 
 
 func process_airborne_movement(delta):
@@ -209,13 +238,18 @@ func process_airborne_movement(delta):
 			current_velocity.y += delta*GRAVITY
 		
 		current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+		
 
 
 func process_climb_movement(delta):
 	if ! climb_ray.is_colliding():
 		current_state = State.AIRBORNE
+		# Orient model
+		my_model.look_at(translation + last_dir_input, Vector3.UP)
 	else :
 		if directional_input.length_squared() < 0.1:
+			# Orient model
+			my_model.look_at(translation + last_dir_input, Vector3.UP)
 			current_state = State.AIRBORNE
 		else:
 			var wall_normal = climb_ray.get_collision_normal()
@@ -263,8 +297,17 @@ func interpolate_velocity(delta):
 	h_current_velocity.y = 0.0
 	
 	var target_velocity = directional_input*MAX_SPEED
-	if is_dash_input and (current_stamina > 0.0):
-		target_velocity *= DASH_FACTOR
+	if is_dash_input:
+		if current_energy > 0.0:
+			# Can dash/shoot or dodge/rush, depending on config
+			if is_shoot_not_rush_config:
+				target_velocity *= DASH_FACTOR
+				edit_energy(DASH_COST*delta)
+			else:
+				dodge_input = directional_input
+				is_dodge_started = false
+				edit_energy(DODGE_COST)
+				current_state = State.DODGE
 	
 	h_current_velocity = h_current_velocity.linear_interpolate(target_velocity, ACCELERATION * delta)
 	current_velocity.x = h_current_velocity.x
@@ -272,6 +315,33 @@ func interpolate_velocity(delta):
 	
 	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 
+func process_dodge_movement(delta):
+	if !is_dodge_started:
+		current_velocity = dodge_input*DODGE_SPEED
+		current_velocity.y = DODGE_JUMP_SPEED
+		is_dodge_started = true
+		dodge_roll_angle = 0.0
+		dodge_initial_facing = -my_model.global_transform.basis.z*Vector3.ONE
+		
+	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+
+	if current_velocity.y > -30:
+		current_velocity.y += delta*GRAVITY
+		
+	# Model roll
+	if dodge_roll_angle < 6:
+#		var rollaxis = (Vector3.UP.cross(dodge_input)).normalized()
+		var rollaxis = Vector3.LEFT
+		var angle = ROTATION_SPEED*delta
+		dodge_roll_angle += angle
+		my_model.rotate_object_local(rollaxis,angle)
+#		my_model.rotate(rollaxis,angle)
+	else:
+		# Orient model
+		my_model.look_at(translation + dodge_initial_facing, Vector3.UP)
+		
+		current_state = State.AIRBORNE
+		is_dodge_started = false
 
 func _input(event):
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
@@ -279,8 +349,8 @@ func _input(event):
 		var h_input = deg2rad(event.relative.x * MOUSE_SENSITIVITY * -1)
 		camera_mount.rotate_x(v_input)
 		self.rotate_y(h_input)
-		# Compensate model rotation when still
-		if directional_input.length_squared() < 0.1:
+		# Compensate model rotation when no input or airborne
+		if (directional_input.length_squared() < 0.1) or (current_state == State.AIRBORNE):
 			my_model.rotate_y(-h_input)
 
 		var camera_rot = camera_mount.rotation_degrees
@@ -393,17 +463,37 @@ func update_camera(delta):
 	else:
 		my_camera.set_translation(camera_localposition)
 
-func update_stamina_health(delta):
-	if current_stamina < MAX_STAMINA:
-		current_stamina += RECOVERY_RATE*delta
+func update_energy_health(delta):
+	if current_energy < MAX_ENERGY:
+		current_energy += RECOVERY_RATE*delta
 	else:
 		if current_health < MAX_HEALTH:
 			current_health += RECOVERY_RATE*delta
-	if is_dash_input:
-		if current_stamina > MIN_STAMINA:
-			current_stamina -= DASH_COST*delta
+
+func edit_health(_value):
+	current_health += _value
+	if current_health > MAX_HEALTH:
+		current_health = MAX_HEALTH
+	elif current_health < 0:
+		game_manager.player_dead()
+
+func edit_energy(_value):
+	if _value > 0.0:
+		if current_energy < MAX_ENERGY:
+			current_energy += _value
+			if current_energy > MAX_ENERGY:
+				edit_health(current_energy - MAX_ENERGY)
+				current_energy = MAX_ENERGY
 		else:
-			current_health -= DASH_COST*delta
+			edit_health(_value)
+	else:
+		if current_energy > 0:
+			current_energy += _value
+			if current_energy < 0:
+				edit_health(current_energy)
+				current_energy = 0
+		else:
+			edit_health(_value)
 
 func make_climb_ray():
 	climb_ray = RayCast.new()
@@ -421,12 +511,26 @@ func make_rush_weapons():
 
 # Called from manager to calculate goal arrow direction:
 func get_arrow(_goal_position):
-	return my_camera.to_local(_goal_position-translation)
+	return my_camera.to_local(_goal_position-my_camera.translation)
 
 func setup_player_layer_mask(_ob):
 	_ob.set_collision_layer(1)
 	_ob.set_collision_mask(30)
+
+func make_timers():
+	actions_timer = Timer.new()
+	add_child(actions_timer)
+	actions_timer.connect("timeout",self,"on_actions_timer_timeout")
+	actions_timer.set_wait_time(0.6)
 	
-func setup_weapon_layer_mask(_ob):
-	_ob.set_collision_layer(8)
-	_ob.set_collision_mask(7)
+	attacks_timer = Timer.new()
+	add_child(attacks_timer)
+	actions_timer.connect("timeout",self,"on_attacks_timer_timeout")
+	actions_timer.set_wait_time(0.6)
+
+func on_actions_timer_timeout():
+	pass
+
+func on_attacks_timer_timeout():
+	if is_shoot_not_rush_config:
+		can_shoot = true
