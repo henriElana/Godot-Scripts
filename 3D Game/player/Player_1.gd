@@ -50,6 +50,7 @@ var current_health = 100
 const MAX_ENERGY = 100
 const RECOVERY_RATE = 5
 var current_energy = 100
+var is_regenerating = true
 const DASH_COST = -30
 const DASH_FACTOR = 2.0
 const DODGE_COST = -10.0
@@ -58,7 +59,7 @@ const DODGE_JUMP_SPEED = 10.0
 var dodge_roll_angle = 0.0
 var dodge_initial_facing = Vector3.ZERO
 var rollaxis = Vector3.LEFT
-var actions_timer :Timer
+var regen_timer :Timer
 var attacks_timer :Timer
 
 var my_camera: Camera
@@ -115,9 +116,8 @@ func _physics_process(delta):
 		State.ATTACK:
 			pass
 	update_camera(delta)
-	update_energy_health(delta)
-	game_manager.update_energy(current_energy)
-	game_manager.update_life(current_health)
+	if is_regenerating:
+		regenerate_energy_health(delta)
 
 
 func process_input(delta):
@@ -470,21 +470,30 @@ func update_camera(delta):
 	else:
 		my_camera.set_translation(camera_localposition)
 
-func update_energy_health(delta):
+func regenerate_energy_health(delta):
 	if current_energy < MAX_ENERGY:
 		current_energy += RECOVERY_RATE*delta
 	else:
 		if current_health < MAX_HEALTH:
 			current_health += RECOVERY_RATE*delta
+	
+	game_manager.update_energy(current_energy)
+	game_manager.update_life(current_health)
 
 func edit_health(_value):
+	is_regenerating = false
+	regen_timer.start()
 	current_health += _value
 	if current_health > MAX_HEALTH:
 		current_health = MAX_HEALTH
 	elif current_health < 0:
 		game_manager.player_dead()
+	
+	game_manager.update_life(current_health)
 
 func edit_energy(_value):
+	is_regenerating = false
+	regen_timer.start()
 	if _value > 0.0:
 		if current_energy < MAX_ENERGY:
 			current_energy += _value
@@ -501,6 +510,8 @@ func edit_energy(_value):
 				current_energy = 0
 		else:
 			edit_health(_value)
+	
+	game_manager.update_energy(current_energy)
 
 func make_climb_ray():
 	climb_ray = RayCast.new()
@@ -525,19 +536,35 @@ func setup_player_layer_mask(_ob):
 	_ob.set_collision_mask(30)
 
 func make_timers():
-	actions_timer = Timer.new()
-	add_child(actions_timer)
-	actions_timer.connect("timeout",self,"on_actions_timer_timeout")
-	actions_timer.set_wait_time(0.6)
+	regen_timer = Timer.new()
+	add_child(regen_timer)
+	regen_timer.connect("timeout",self,"on_regen_timer_timeout")
+	regen_timer.set_wait_time(5)
 	
 	attacks_timer = Timer.new()
 	add_child(attacks_timer)
-	actions_timer.connect("timeout",self,"on_attacks_timer_timeout")
-	actions_timer.set_wait_time(0.6)
+	attacks_timer.connect("timeout",self,"on_attacks_timer_timeout")
+	attacks_timer.set_wait_time(0.6)
 
-func on_actions_timer_timeout():
-	pass
+func on_regen_timer_timeout():
+	is_regenerating = true
 
 func on_attacks_timer_timeout():
 	if !can_attack:
 		can_attack = true
+
+func take_bullet_damage(damage_):
+	pass
+
+func take_explosion_damage(damage_, center):
+	pass
+
+func take_mauling_damage(damage_):
+	pass
+
+func take_edgecore_damage(damage_, direction):
+	pass
+
+#for the mobs, rush attacks damage
+#func take_CC_damage(damage_, center):
+#	pass
