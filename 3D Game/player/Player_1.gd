@@ -12,12 +12,12 @@ var aim_input := Vector3()
 var dodge_input := Vector3()
 var is_dodge_started = false
 var is_jump_input = false
-var is_dash_input = false
-var is_attack_input = false
-var is_shoot_not_rush_config = false
-var is_direct_not_vertical_attack_mode = false
+var is_dodge_input = false
+var is_shoot_input = false
+var is_mortar_input = false
+var is_rush_input = false
 
-var can_shoot = true
+var can_attack = true
 const GUN_COOLDOWN = 0.2 # Direct attack
 const MORTAR_COOLDOWN = 0.8 # Vertical attack
 
@@ -31,8 +31,6 @@ const STRAIGHT_COLLIDER_RADIUS = 1.0
 
 var rush_start_position := Vector3()
 var rush_target_position := Vector3()
-
-var is_gun_setup = true # Else, dash attack setup
 
 var current_velocity: Vector3
 var h_current_velocity: Vector3
@@ -59,6 +57,7 @@ const DODGE_SPEED = 30
 const DODGE_JUMP_SPEED = 10.0
 var dodge_roll_angle = 0.0
 var dodge_initial_facing = Vector3.ZERO
+var rollaxis = Vector3.LEFT
 var actions_timer :Timer
 var attacks_timer :Timer
 
@@ -77,6 +76,7 @@ var my_collisionshape: CollisionShape
 var collider_radius = 0.8
 
 var my_model: Spatial
+var model_mount :Spatial
 
 var climb_ray: RayCast
 
@@ -130,8 +130,10 @@ func process_input(delta):
 	var input_movement_vector = Vector3()
 
 	is_jump_input = false
-	is_dash_input = false
-	is_attack_input = false	
+	is_dodge_input = false
+	is_shoot_input = false	
+	is_mortar_input = false	
+	is_rush_input = false	
 	
 	if Input.is_action_pressed("ui_up"):
 		input_movement_vector.z -= 1
@@ -152,13 +154,13 @@ func process_input(delta):
 	if Input.is_action_pressed("ui_jump"):
 		is_jump_input = true
 	if Input.is_action_pressed("ui_duck"):
-		is_dash_input = true
+		is_dodge_input = true
 	if Input.is_action_pressed("ui_lmb"):
-		is_attack_input = true
+		is_shoot_input = true
 	if Input.is_action_pressed("ui_rmb"):
-		is_direct_not_vertical_attack_mode = !is_direct_not_vertical_attack_mode
+		is_rush_input = true
 	if Input.is_action_pressed("ui_mmb"):
-		is_shoot_not_rush_config = !is_shoot_not_rush_config
+		is_mortar_input = true
 
 	input_movement_vector = input_movement_vector.normalized()
 
@@ -179,6 +181,30 @@ func process_input(delta):
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	# ----------------------------------
 
+func interpolate_velocity(delta):
+	
+	if is_jump_input:
+		current_velocity.y = JUMP_SPEED
+	elif current_velocity.y > -60:
+		current_velocity.y += delta*GRAVITY
+	
+	h_current_velocity = current_velocity
+	h_current_velocity.y = 0.0
+	
+	var target_velocity = directional_input*MAX_SPEED
+	if is_dodge_input:
+		if current_energy > 0.0:
+			dodge_input = directional_input
+			is_dodge_started = false
+			edit_energy(DODGE_COST)
+			current_state = State.DODGE
+	
+	h_current_velocity = h_current_velocity.linear_interpolate(target_velocity, ACCELERATION * delta)
+	current_velocity.x = h_current_velocity.x
+	current_velocity.z = h_current_velocity.z
+	
+	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+
 func process_grounded_movement(delta):
 	
 	if !is_on_floor():
@@ -190,12 +216,12 @@ func process_grounded_movement(delta):
 		if h_current_velocity.length_squared() > 2:
 			interpolate_velocity(delta)
 			# Orient model
-			my_model.look_at(translation + h_current_velocity, Vector3.UP)
+			model_mount.look_at(translation + h_current_velocity, Vector3.UP)
 			
 		# When still and movement input, align model with directional_input before moving
 		elif directional_input.length_squared() > 0.1:
 			# Angle from model front to target direction ; positive -> rotate left -> positive angle.
-			var model_forward = -my_model.global_transform.basis.z*Vector3.ONE
+			var model_forward = -model_mount.global_transform.basis.z*Vector3.ONE
 			var sinus = model_forward.cross(directional_input).y
 			var angle = model_forward.angle_to(directional_input)
 			# is model aligned with directional_input ?
@@ -203,27 +229,25 @@ func process_grounded_movement(delta):
 				# Yes : start normal movement
 				interpolate_velocity(delta)
 				# Orient model
-				my_model.look_at(translation + h_current_velocity, Vector3.UP)
+				model_mount.look_at(translation + h_current_velocity, Vector3.UP)
 			else:
 				# No : rotate model. sinus > 0 --> positive rotation
 				var rotation_sign = 2*int(sinus > 0)-1
-				my_model.rotate_y(rotation_sign*ROTATION_SPEED*delta)
+				model_mount.rotate_y(rotation_sign*ROTATION_SPEED*delta)
 				
 				# But can still dodge !
-				if is_dash_input:
+				if is_dodge_input:
 					if current_energy > 0.0:
-						# Can dash/shoot or dodge/rush, depending on config
-						if !is_shoot_not_rush_config:
-							dodge_input = directional_input
-							is_dodge_started = false
-							edit_energy(DODGE_COST)
-							current_state = State.DODGE
+						dodge_input = directional_input
+						is_dodge_started = false
+						edit_energy(DODGE_COST)
+						current_state = State.DODGE
 				
 		else:
 			interpolate_velocity(delta)
 			
 			# Orient model
-			my_model.look_at(translation + last_dir_input, Vector3.UP)
+			model_mount.look_at(translation + last_dir_input, Vector3.UP)
 
 
 func process_airborne_movement(delta):
@@ -234,7 +258,7 @@ func process_airborne_movement(delta):
 		current_state = State.CLIMB
 	else:
 		# Manage freefall
-		if current_velocity.y > -30:
+		if current_velocity.y > -60:
 			current_velocity.y += delta*GRAVITY
 		
 		current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
@@ -245,11 +269,11 @@ func process_climb_movement(delta):
 	if ! climb_ray.is_colliding():
 		current_state = State.AIRBORNE
 		# Orient model
-		my_model.look_at(translation + last_dir_input, Vector3.UP)
+		model_mount.look_at(translation + last_dir_input, Vector3.UP)
 	else :
 		if directional_input.length_squared() < 0.1:
 			# Orient model
-			my_model.look_at(translation + last_dir_input, Vector3.UP)
+			model_mount.look_at(translation + last_dir_input, Vector3.UP)
 			current_state = State.AIRBORNE
 		else:
 			var wall_normal = climb_ray.get_collision_normal()
@@ -269,11 +293,11 @@ func process_climb_movement(delta):
 				current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 				
 				# Orient model
-				my_model.look_at(translation - wall_normal, current_velocity)
+				model_mount.look_at(translation - wall_normal, current_velocity)
 				
 			else:
 				# Input away from wall : drop
-				if current_velocity.y > -30:
+				if current_velocity.y > -60:
 					current_velocity.y += delta*GRAVITY
 				h_current_velocity = current_velocity
 				h_current_velocity.y = 0.0
@@ -286,59 +310,41 @@ func process_climb_movement(delta):
 				
 				current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 
-func interpolate_velocity(delta):
-	
-	if is_jump_input:
-		current_velocity.y = JUMP_SPEED
-	elif current_velocity.y > -30:
-		current_velocity.y += delta*GRAVITY
-	
-	h_current_velocity = current_velocity
-	h_current_velocity.y = 0.0
-	
-	var target_velocity = directional_input*MAX_SPEED
-	if is_dash_input:
-		if current_energy > 0.0:
-			# Can dash/shoot or dodge/rush, depending on config
-			if is_shoot_not_rush_config:
-				target_velocity *= DASH_FACTOR
-				edit_energy(DASH_COST*delta)
-			else:
-				dodge_input = directional_input
-				is_dodge_started = false
-				edit_energy(DODGE_COST)
-				current_state = State.DODGE
-	
-	h_current_velocity = h_current_velocity.linear_interpolate(target_velocity, ACCELERATION * delta)
-	current_velocity.x = h_current_velocity.x
-	current_velocity.z = h_current_velocity.z
-	
-	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
-
 func process_dodge_movement(delta):
 	if !is_dodge_started:
 		current_velocity = dodge_input*DODGE_SPEED
 		current_velocity.y = DODGE_JUMP_SPEED
 		is_dodge_started = true
 		dodge_roll_angle = 0.0
-		dodge_initial_facing = -my_model.global_transform.basis.z*Vector3.ONE
-		
+		# Roll axis ; 0.7 simeq sqrt(2)/2
+		var model_forward = -model_mount.global_transform.basis.z*Vector3.ONE
+		var cosinus = model_forward.dot(dodge_input)
+		var sinus =  model_forward.cross(dodge_input).y
+		if cosinus >= 0.7:
+			rollaxis = Vector3.LEFT
+		elif cosinus <= -0.7 :
+			rollaxis = Vector3.RIGHT
+		elif sinus < 0.0:
+			rollaxis = Vector3.FORWARD
+		elif sinus > 0.0:
+			rollaxis = Vector3.BACK
+		else:
+			rollaxis = Vector3.RIGHT
+	
+	
 	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 
-	if current_velocity.y > -30:
+	if current_velocity.y > -60:
 		current_velocity.y += delta*GRAVITY
 		
 	# Model roll
 	if dodge_roll_angle < 6:
-#		var rollaxis = (Vector3.UP.cross(dodge_input)).normalized()
-		var rollaxis = Vector3.LEFT
 		var angle = ROTATION_SPEED*delta
 		dodge_roll_angle += angle
 		my_model.rotate_object_local(rollaxis,angle)
-#		my_model.rotate(rollaxis,angle)
 	else:
 		# Orient model
-		my_model.look_at(translation + dodge_initial_facing, Vector3.UP)
+		my_model.rotation = Vector3.ZERO
 		
 		current_state = State.AIRBORNE
 		is_dodge_started = false
@@ -351,7 +357,7 @@ func _input(event):
 		self.rotate_y(h_input)
 		# Compensate model rotation when no input or airborne
 		if (directional_input.length_squared() < 0.1) or (current_state == State.AIRBORNE):
-			my_model.rotate_y(-h_input)
+			model_mount.rotate_y(-h_input)
 
 		var camera_rot = camera_mount.rotation_degrees
 		camera_rot.x = clamp(camera_rot.x, -70, 70)
@@ -374,9 +380,11 @@ func _input(event):
 				target_camera_localposition.x -= increment
 
 func make_model():
-	my_model = Spatial.new()
-	add_child(my_model)
+	model_mount = Spatial.new()
+	add_child(model_mount)
 	
+	my_model = Spatial.new()
+	model_mount.add_child(my_model)
 	# Body
 	var meshinstance = MeshInstance.new()
 	my_model.add_child(meshinstance)
@@ -438,9 +446,8 @@ func make_collision_shape():
 	my_collisionshape.shape.set_radius(collider_radius)
 	setup_player_layer_mask(self)
 
-func set_collision_shape_radius_height(_radius, _height):
+func set_collision_shape_radius(_radius):
 	my_collisionshape.set_radius(_radius)
-	my_collisionshape.set_height(_height)
 
 func make_camera():
 	camera_mount = Spatial.new()
@@ -497,7 +504,7 @@ func edit_energy(_value):
 
 func make_climb_ray():
 	climb_ray = RayCast.new()
-	my_model.add_child(climb_ray)
+	model_mount.add_child(climb_ray)
 	climb_ray.set_cast_to(Vector3(0,0,-1.5*collider_radius))
 	climb_ray.set_collision_mask(2) # Only collide with layer 2 : terrain
 	climb_ray.set_enabled(true)
@@ -532,5 +539,5 @@ func on_actions_timer_timeout():
 	pass
 
 func on_attacks_timer_timeout():
-	if is_shoot_not_rush_config:
-		can_shoot = true
+	if !can_attack:
+		can_attack = true
