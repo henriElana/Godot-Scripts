@@ -26,7 +26,7 @@ onready var e_bar_background = $VBoxContainer/HBoxContainer/Bars/EnergyBar/Progr
 var current_energy = 100
 var previous_energy = 100
 var animated_energy = 100
-onready var e_tween = $i_Tween
+onready var e_tween = $e_Tween
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -38,12 +38,13 @@ func _ready():
 	green_label.text = "00"
 
 func _process(delta):
-	if current_life >= animated_life:
+	if current_life >= previous_life:
 		l_bar_front.value = animated_life
+		print(animated_energy)
 	else:
 		l_bar_background.value = animated_life
 	
-	if current_energy >= animated_energy:
+	if current_energy >= previous_energy:
 		e_bar_front.value = animated_energy
 	else:
 		e_bar_background.value = animated_energy
@@ -60,6 +61,9 @@ func update_green_label(new_value):
 	green_label.text = str(round(new_value))
 
 func update_energy(new_value):
+	if not e_tween.is_active():
+		e_tween.start()
+	
 	if current_energy < new_value:
 		# Energy increasing, animate front progress.
 		e_bar_background.value = new_value
@@ -74,35 +78,28 @@ func update_energy(new_value):
 		previous_energy = current_energy
 		current_energy = new_value
 		e_tween.interpolate_property(self, "animated_energy", previous_energy, current_energy, 0.6, Tween.TRANS_LINEAR, Tween.EASE_IN)
-	
-	if not e_tween.is_active():
-		e_tween.start()
+
 
 func update_life(new_value):
+	
+	if not l_tween.is_active():
+		l_tween.start()
+		
 	if current_life < new_value:
 		# Energy increasing, animate front progress.
 		l_bar_background.value = new_value
 		l_bar_front.value = current_life
 		previous_life = current_life
 		current_life = new_value
-		l_tween.interpolate_property(self, "animated_energy", previous_life, current_life, 0.6, Tween.TRANS_LINEAR, Tween.EASE_IN)
+		l_tween.interpolate_property(self, "animated_life", previous_life, current_life, 0.6, Tween.TRANS_LINEAR, Tween.EASE_IN)
 	else:
 		# Energy decreasing, animate back progress.
 		l_bar_front.value = new_value
 		l_bar_background.value = current_life
 		previous_life = current_life
 		current_life = new_value
-		l_tween.interpolate_property(self, "animated_energy", previous_life, current_life, 0.6, Tween.TRANS_LINEAR, Tween.EASE_IN)
+		l_tween.interpolate_property(self, "animated_life", previous_life, current_life, 0.6, Tween.TRANS_LINEAR, Tween.EASE_IN)
 	
-	if not l_tween.is_active():
-		l_tween.start()
-
-func update_green_goal(_text):
-	green_label.text = _text
-
-
-func update_red_timer(_text):
-	red_label.text = _text
 
 func display_message(_text):
 	main_text.text = _text
