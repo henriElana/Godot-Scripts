@@ -117,11 +117,17 @@ func add_clouds(x, z, parent):
 	
 	# No collision with clouds --> "false" parameter
 	if roll < proba_cloud:
-		AaPrism.random_free(Vector3(3,3,3), Vector3(x, heigth*cell_size, z),
+		var cloud_ = AaPrism.random_free(Vector3(3,3,3), Vector3(x, heigth*cell_size, z),
 				 Vector3(5*cell_size, 3*cell_size, 5*cell_size), parent, m_cloud, false)
+		# Keep texture overlap with buildings to a minimum :
+		var y_rot_ = deg2rad(30)
+		cloud_.rotate_y(y_rot_)
 	if roll < 0.5*proba_cloud:
-		AaPrism.random_free(Vector3(3,3,3), Vector3(x, (heigth+1.5)*cell_size, z),
+		var cloud_ = AaPrism.random_free(Vector3(3,3,3), Vector3(x, (heigth+1.5)*cell_size, z),
 				 Vector3(5*cell_size, 3*cell_size, 5*cell_size), parent, m_cloud, false)
+		# Keep texture overlap with buildings to a minimum :
+		var y_rot_ = deg2rad(30)
+		cloud_.rotate_y(y_rot_)
 
 
 func add_roadblocks(x, z, parent):
