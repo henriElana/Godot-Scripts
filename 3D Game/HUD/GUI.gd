@@ -40,7 +40,6 @@ func _ready():
 func _process(delta):
 	if current_life >= previous_life:
 		l_bar_front.value = animated_life
-		print(animated_energy)
 	else:
 		l_bar_background.value = animated_life
 	
