@@ -7,7 +7,7 @@ enum State {GROUNDED,AIRBORNE,SHOCK,DODGE,CLIMB,FOCUS,RUSH,ATTACK}
 var current_state = State.GROUNDED
 
 var directional_input := Vector3()
-var last_dir_input := Vector3()
+var last_dir_input := Vector3(0, 0, -1)
 var aim_input := Vector3()
 var dodge_input := Vector3()
 var is_dodge_started = false
@@ -84,6 +84,11 @@ var climb_ray: RayCast
 # Weapons
 var gun_mount: Spatial
 var aiming_ray: RayCast
+var target_pointer: Spatial
+var mat_pointer_yellow = preload("res://materials/fx_yellow.material")
+var mat_pointer_green = preload("res://materials/fx_green.material")
+var mat_pointer_blue = preload("res://materials/fx_cyan.material")
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -93,6 +98,7 @@ func _ready():
 	make_model()
 	make_climb_ray()
 	make_timers()
+	make_gun()
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -207,10 +213,14 @@ func interpolate_velocity(delta):
 
 func process_grounded_movement(delta):
 	
+	update_gun_pointer()
+	
 	if !is_on_floor():
 		current_state = State.AIRBORNE
+		activate_aim()
 	elif climb_ray.is_colliding():
 		current_state = State.CLIMB
+		deactivate_aim()
 	else:
 		# Movement management when already moving
 		if h_current_velocity.length_squared() > 2:
@@ -252,10 +262,14 @@ func process_grounded_movement(delta):
 
 func process_airborne_movement(delta):
 	
+	update_gun_pointer()
+	
 	if is_on_floor():
 		current_state = State.GROUNDED
+		activate_aim()
 	elif (directional_input.length_squared() > 0.1) and (climb_ray.is_colliding()):
 		current_state = State.CLIMB
+		deactivate_aim()
 	else:
 		# Manage freefall
 		if current_velocity.y > -60:
@@ -266,8 +280,10 @@ func process_airborne_movement(delta):
 
 
 func process_climb_movement(delta):
+		
 	if ! climb_ray.is_colliding():
 		current_state = State.AIRBORNE
+		activate_aim()
 		# Orient model
 		model_mount.look_at(translation + last_dir_input, Vector3.UP)
 	else :
@@ -275,6 +291,7 @@ func process_climb_movement(delta):
 			# Orient model
 			model_mount.look_at(translation + last_dir_input, Vector3.UP)
 			current_state = State.AIRBORNE
+			activate_aim()
 		else:
 			var wall_normal = climb_ray.get_collision_normal()
 			var cosinus = wall_normal.dot(directional_input)
@@ -311,6 +328,9 @@ func process_climb_movement(delta):
 				current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 
 func process_dodge_movement(delta):
+	
+	update_gun_pointer()
+	
 	if !is_dodge_started:
 		current_velocity = dodge_input*DODGE_SPEED
 		current_velocity.y = DODGE_JUMP_SPEED
@@ -347,6 +367,7 @@ func process_dodge_movement(delta):
 		my_model.rotation = Vector3.ZERO
 		
 		current_state = State.AIRBORNE
+		activate_aim()
 		is_dodge_started = false
 
 func _input(event):
@@ -517,12 +538,66 @@ func make_climb_ray():
 	climb_ray = RayCast.new()
 	model_mount.add_child(climb_ray)
 	climb_ray.set_cast_to(Vector3(0,0,-1.5*collider_radius))
+	climb_ray.add_exception(self)
 	climb_ray.set_collision_mask(2) # Only collide with layer 2 : terrain
 	climb_ray.set_enabled(true)
 	
 
-func make_guns():
-	pass
+func make_gun():
+	gun_mount = Spatial.new()
+	add_child(gun_mount)
+	
+	aiming_ray = RayCast.new()
+	gun_mount.add_child(aiming_ray)
+	aiming_ray.set_cast_to(Vector3(0, 0, -200))
+	aiming_ray.add_exception(self)
+	aiming_ray.set_collision_mask(6) # Collide with layers 2,3 : terrain+mobs
+	aiming_ray.set_enabled(true)
+	
+	target_pointer = Spatial.new()
+	game_manager.add_child(target_pointer)
+	# Pointer model
+	var meshinstance = MeshInstance.new()
+	target_pointer.add_child(meshinstance)
+	meshinstance.mesh = SphereMesh.new()
+	meshinstance.mesh.set_radius(0.20)
+	meshinstance.mesh.set_height(0.60)
+	meshinstance.mesh.set_radial_segments(4)
+	meshinstance.mesh.set_rings(1)
+	meshinstance.set_translation(Vector3(0.0, 0.0, -0.30))
+	meshinstance.set_rotation_degrees(Vector3(-90.0, 0.0, 0.0))
+	meshinstance.mesh.set_material(mat_pointer_yellow)
+	
+
+func update_gun_pointer():
+	gun_mount.set_rotation(camera_mount.rotation)
+	if aiming_ray.is_colliding():
+		var point_ = aiming_ray.get_collision_point()
+		var normal_ = aiming_ray.get_collision_normal()
+		target_pointer.look_at_from_position(point_, point_+normal_, Vector3(1,1,1.5))
+		if !target_pointer.is_visible():
+			target_pointer.show()
+	else:
+		if target_pointer.is_visible():
+			target_pointer.hide()
+
+func activate_aim():
+	aiming_ray.set_cast_to(Vector3(0, 0, -200))
+	aiming_ray.set_enabled(true)
+
+func activate_slam_ray():
+	gun_mount.set_rotation(model_mount.rotation)
+	aiming_ray.set_cast_to(Vector3(0, -2, -2))
+	aiming_ray.set_enabled(true)
+
+func activate_thrust_ray():
+	gun_mount.set_rotation(model_mount.rotation)
+	aiming_ray.set_cast_to(Vector3(0, 0, -3))
+	aiming_ray.set_enabled(true)
+
+func deactivate_aim():
+	aiming_ray.set_enabled(false)
+	target_pointer.hide()
 
 func make_rush_weapons():
 	pass
