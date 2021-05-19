@@ -3,7 +3,7 @@ extends KinematicBody
 var game_manager
 
 # States manager
-enum State {GROUNDED,AIRBORNE,SHOCK,DODGE,CLIMB,FOCUS,RUSH,ATTACK}
+enum State {GROUNDED,AIRBORNE,SHOCK,DODGE,CLIMB,FOCUS,RUSH,SMASH}
 var current_state = State.GROUNDED
 
 var directional_input := Vector3()
@@ -11,26 +11,22 @@ var last_dir_input := Vector3(0, 0, -1)
 var aim_input := Vector3()
 var dodge_input := Vector3()
 var is_dodge_started = false
+var shock_speed := Vector3()
+var shock_rot_axis := Vector3()
+var is_shock_started = false
 var is_jump_input = false
 var is_dodge_input = false
 var is_shoot_input = false
 var is_mortar_input = false
 var is_rush_input = false
 
-var can_attack = true
-const GUN_COOLDOWN = 0.2 # Direct attack
-const MORTAR_COOLDOWN = 0.8 # Vertical attack
+const RUSH_COLLIDER_RADIUS = 1.5
+const RUSH_SPEED = 40
 
-var can_rush = true
-const STRAIGHT_RUSH_COOLDOWN = 0.5 # Direct attack
-const SLAM_RUSH_COOLDOWN = 1.0 # Vertical attack
-const SLAM_COLLIDER_OFFSET = Vector3(0, -1, -1)
-const STRAIGHT_COLLIDER_OFFSET = Vector3(0,0,-2)
-const SLAM_COLLIDER_RADIUS = 2.0
-const STRAIGHT_COLLIDER_RADIUS = 1.0
 
 var rush_start_position := Vector3()
 var rush_target_position := Vector3()
+var rush_distance_squared = 0.0
 
 var current_velocity: Vector3
 var h_current_velocity: Vector3
@@ -56,6 +52,8 @@ const DASH_FACTOR = 2.0
 const DODGE_COST = -10.0
 const DODGE_SPEED = 30
 const DODGE_JUMP_SPEED = 10.0
+const EXPLOSION_SPEED = 10.0
+const SMASH_SPEED = 15.0
 var dodge_roll_angle = 0.0
 var dodge_initial_facing = Vector3.ZERO
 var rollaxis = Vector3.LEFT
@@ -72,6 +70,7 @@ var cam_side_offset = 0.5
 var cam_forward_offset = 1.5
 var cam_back_offset = 2.5
 var increment = 0.1
+var cam_rush_offset = Vector3.ZERO
 
 var my_collisionshape: CollisionShape
 var collider_radius = 0.8
@@ -82,13 +81,34 @@ var model_mount :Spatial
 var climb_ray: RayCast
 
 # Weapons
-var gun_mount: Spatial
+var is_aiming_gun = true
+var is_processing_inputs = true
+var is_rushing = false
+var is_smashing = false
+var weapon_mount: Spatial
+var gun_mount_offset = Vector3(0.0, 0.3, 0.0)
 var aiming_ray: RayCast
 var target_pointer: Spatial
-var mat_pointer_yellow = preload("res://materials/fx_yellow.material")
+var pointer_mesh
+var pointer_knob: Spatial
+var knob_mesh
+var mat_pointer_red = preload("res://materials/fx_red.material")
 var mat_pointer_green = preload("res://materials/fx_green.material")
-var mat_pointer_blue = preload("res://materials/fx_cyan.material")
-
+var mat_pointer_purple = preload("res://materials/fx_magenta.material")
+const CLOSE_COMBAT_RANGE_SQUARED = 400.0
+var is_cc_range = false
+var is_critical_hit = false
+var can_attack = true
+const GUN_COOLDOWN = 0.2 # Direct attack
+const MORTAR_COOLDOWN = 0.5 # Vertical attack
+const CLOSE_COMBAT_COOLDOWN = 0.2
+const SHOCK_COOLDOWN = 1.0
+const BULLET_DAMAGE = 10
+const MORTAR_DAMAGE = 20
+const CLOSE_COMBAT_DAMAGE = 20
+const BULLET_COST = 1
+const MORTAR_COST = 2
+const CLOSE_COMBAT_COST = 4
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -98,29 +118,32 @@ func _ready():
 	make_model()
 	make_climb_ray()
 	make_timers()
-	make_gun()
+	make_weapon()
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func _physics_process(delta):
-	process_input(delta)
+	# No inputs processed if shocked or close combat states (focus, rush, smash)
+	if is_processing_inputs:
+		process_input(delta)
+		
 	match current_state:
 		State.GROUNDED:
 			process_grounded_movement(delta)
 		State.AIRBORNE:
 			process_airborne_movement(delta)
 		State.SHOCK:
-			pass
+			process_shock_movement(delta)
 		State.DODGE:
 			process_dodge_movement(delta)
 		State.CLIMB:
 			process_climb_movement(delta)
 		State.FOCUS:
-			pass
+			process_focus_movement(delta)
 		State.RUSH:
-			pass
-		State.ATTACK:
-			pass
+			process_rush_movement(delta)
+		State.SMASH:
+			process_smash_state(delta)
 	update_camera(delta)
 	if is_regenerating:
 		regenerate_energy_health(delta)
@@ -190,6 +213,7 @@ func process_input(delta):
 func interpolate_velocity(delta):
 	
 	if is_jump_input:
+		is_jump_input = false
 		current_velocity.y = JUMP_SPEED
 	elif current_velocity.y > -60:
 		current_velocity.y += delta*GRAVITY
@@ -199,6 +223,7 @@ func interpolate_velocity(delta):
 	
 	var target_velocity = directional_input*MAX_SPEED
 	if is_dodge_input:
+		is_dodge_input = false
 		if current_energy > 0.0:
 			dodge_input = directional_input
 			is_dodge_started = false
@@ -213,14 +238,10 @@ func interpolate_velocity(delta):
 
 func process_grounded_movement(delta):
 	
-	update_gun_pointer()
-	
 	if !is_on_floor():
 		current_state = State.AIRBORNE
-		activate_aim()
 	elif climb_ray.is_colliding():
 		current_state = State.CLIMB
-		deactivate_aim()
 	else:
 		# Movement management when already moving
 		if h_current_velocity.length_squared() > 2:
@@ -231,7 +252,7 @@ func process_grounded_movement(delta):
 		# When still and movement input, align model with directional_input before moving
 		elif directional_input.length_squared() > 0.1:
 			# Angle from model front to target direction ; positive -> rotate left -> positive angle.
-			var model_forward = -model_mount.global_transform.basis.z*Vector3.ONE
+			var model_forward = -model_mount.get_global_transform().basis.z
 			var sinus = model_forward.cross(directional_input).y
 			var angle = model_forward.angle_to(directional_input)
 			# is model aligned with directional_input ?
@@ -247,6 +268,7 @@ func process_grounded_movement(delta):
 				
 				# But can still dodge !
 				if is_dodge_input:
+					is_dodge_input = false
 					if current_energy > 0.0:
 						dodge_input = directional_input
 						is_dodge_started = false
@@ -258,18 +280,16 @@ func process_grounded_movement(delta):
 			
 			# Orient model
 			model_mount.look_at(translation + last_dir_input, Vector3.UP)
+	
+	update_weapon()
 
 
 func process_airborne_movement(delta):
 	
-	update_gun_pointer()
-	
 	if is_on_floor():
 		current_state = State.GROUNDED
-		activate_aim()
 	elif (directional_input.length_squared() > 0.1) and (climb_ray.is_colliding()):
 		current_state = State.CLIMB
-		deactivate_aim()
 	else:
 		# Manage freefall
 		if current_velocity.y > -60:
@@ -277,21 +297,57 @@ func process_airborne_movement(delta):
 		
 		current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 		
+		# Orient model
+		var facing_ = current_velocity
+		facing_.y = 0.0
+		if facing_.length_squared() > 0.1 :
+			model_mount.look_at(translation + facing_, Vector3.UP)
+	
+	update_weapon()
+
+
+func process_shock_movement(delta):
+		
+	if !is_shock_started:
+		#init shock
+		can_attack = false
+		is_processing_inputs = false
+		is_aiming_gun = false
+		attacks_timer.set_wait_time(SHOCK_COOLDOWN)
+		attacks_timer.start()
+		current_velocity = shock_speed
+		
+		is_shock_started = true
+	
+	# Manage freefall and bounce
+	if current_velocity.y > -60:
+		current_velocity.y += delta*GRAVITY
+	
+	var k_col_ = move_and_collide(current_velocity*delta)
+	if k_col_ != null:
+		current_velocity = -current_velocity.reflect(k_col_.normal)
+	
+	# Rotate model
+	var angle = ROTATION_SPEED*delta
+	my_model.global_rotate(shock_rot_axis,angle)
+
 
 
 func process_climb_movement(delta):
-		
+	
 	if ! climb_ray.is_colliding():
-		current_state = State.AIRBORNE
-		activate_aim()
 		# Orient model
 		model_mount.look_at(translation + last_dir_input, Vector3.UP)
+		my_model.rotation = Vector3.ZERO
+		
+		current_state = State.AIRBORNE
 	else :
 		if directional_input.length_squared() < 0.1:
-			# Orient model
+			# Orient model mount
 			model_mount.look_at(translation + last_dir_input, Vector3.UP)
+			my_model.rotation = Vector3.ZERO
+			
 			current_state = State.AIRBORNE
-			activate_aim()
 		else:
 			var wall_normal = climb_ray.get_collision_normal()
 			var cosinus = wall_normal.dot(directional_input)
@@ -310,7 +366,7 @@ func process_climb_movement(delta):
 				current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
 				
 				# Orient model
-				model_mount.look_at(translation - wall_normal, current_velocity)
+				my_model.look_at(translation - wall_normal, current_velocity)
 				
 			else:
 				# Input away from wall : drop
@@ -326,30 +382,17 @@ func process_climb_movement(delta):
 				current_velocity.z = h_current_velocity.z
 				
 				current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+	
+	update_weapon()
 
 func process_dodge_movement(delta):
-	
-	update_gun_pointer()
 	
 	if !is_dodge_started:
 		current_velocity = dodge_input*DODGE_SPEED
 		current_velocity.y = DODGE_JUMP_SPEED
-		is_dodge_started = true
 		dodge_roll_angle = 0.0
-		# Roll axis ; 0.7 simeq sqrt(2)/2
-		var model_forward = -model_mount.global_transform.basis.z*Vector3.ONE
-		var cosinus = model_forward.dot(dodge_input)
-		var sinus =  model_forward.cross(dodge_input).y
-		if cosinus >= 0.7:
-			rollaxis = Vector3.LEFT
-		elif cosinus <= -0.7 :
-			rollaxis = Vector3.RIGHT
-		elif sinus < 0.0:
-			rollaxis = Vector3.FORWARD
-		elif sinus > 0.0:
-			rollaxis = Vector3.BACK
-		else:
-			rollaxis = Vector3.RIGHT
+		rollaxis = (Vector3.UP.cross(dodge_input)).normalized()
+		is_dodge_started = true
 	
 	
 	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
@@ -361,14 +404,101 @@ func process_dodge_movement(delta):
 	if dodge_roll_angle < 6:
 		var angle = ROTATION_SPEED*delta
 		dodge_roll_angle += angle
-		my_model.rotate_object_local(rollaxis,angle)
+		my_model.global_rotate(rollaxis,angle)
 	else:
 		# Orient model
 		my_model.rotation = Vector3.ZERO
 		
 		current_state = State.AIRBORNE
-		activate_aim()
 		is_dodge_started = false
+
+
+func process_focus_movement(delta):
+	print("focus in progress")
+	# Angle from model front to target direction ; positive -> rotate left -> positive angle.
+	var model_forward = -model_mount.get_global_transform().basis.z
+	if model_forward.y != 0.0:
+		print("model mount tilted !!")
+	var sinus = model_forward.cross(directional_input).y
+	var angle = model_forward.angle_to(directional_input)
+	# is model aligned with directional_input ?
+	if angle < 0.2:
+		# Yes : start rush movement
+		current_state = State.RUSH
+		model_mount.look_at(translation + directional_input, Vector3.UP)
+		print("switch to rush")
+	else:
+		# No : rotate model. sinus > 0 --> positive rotation
+		var rotation_sign = 2*int(sinus > 0)-1
+		model_mount.rotate_y(rotation_sign*ROTATION_SPEED*delta)
+		model_mount.set_transform(model_mount.get_transform().orthonormalized())
+		print("rotate")
+	# But keeps moving and falling !
+	if current_velocity.y > -60:
+		current_velocity.y += delta*GRAVITY
+		
+	current_velocity = move_and_slide(current_velocity, Vector3(0, 1, 0))
+
+
+func process_rush_movement(delta):
+	
+	if !is_rushing:
+		rush_start_position = self.translation
+		directional_input = rush_target_position - rush_start_position
+		# Needed for rush termination if target missed :
+		rush_distance_squared = directional_input.length_squared()
+		directional_input = directional_input.normalized()
+		# Orient model
+		my_model.look_at(translation + directional_input, Vector3.UP)
+		# Orient weapon raycast
+		weapon_mount.set_rotation(my_model.rotation)
+		print("rush started")
+		last_dir_input = directional_input
+		last_dir_input.y = 0.0
+		is_rushing = true
+	
+	if rush_distance_squared < 4.0:
+		current_state = State.SMASH
+		is_rushing = false
+		print("too close hit now")
+		
+	
+	var target_velocity = directional_input*RUSH_SPEED
+	current_velocity = move_and_slide(target_velocity, Vector3(0, 1, 0))
+	
+	cam_rush_offset = rush_start_position - self.translation
+	var dist_sqrd_ = cam_rush_offset.length_squared()
+	if dist_sqrd_ < 0.5*rush_distance_squared:
+		# Camera drags behind
+		target_camera_localposition.z = cam_back_offset + cam_rush_offset.length()
+		
+	
+	if dist_sqrd_ > 1.5*rush_distance_squared:
+		current_state = State.SMASH
+		is_rushing = false
+		print("too far hit now")
+	
+	update_weapon()
+	
+
+func process_smash_state(delta):
+	if !is_smashing:
+		is_rushing = false
+		# Camera catches up
+		target_camera_localposition.z = cam_back_offset
+		
+		attacks_timer.set_wait_time(CLOSE_COMBAT_COOLDOWN)
+		attacks_timer.start()
+		# Add explosion; extra damage from raycast.
+		game_manager.add_smashblast(translation + 2.5*directional_input)
+		current_velocity = Vector3.ZERO
+		move_and_slide(current_velocity, Vector3(0, 1, 0))
+		
+		print("hulk smash!")
+		is_smashing = true
+	
+	
+
 
 func _input(event):
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
@@ -376,8 +506,11 @@ func _input(event):
 		var h_input = deg2rad(event.relative.x * MOUSE_SENSITIVITY * -1)
 		camera_mount.rotate_x(v_input)
 		self.rotate_y(h_input)
-		# Compensate model rotation when no input or airborne
-		if (directional_input.length_squared() < 0.1) or (current_state == State.AIRBORNE):
+		# Compensate model rotation when no input or airborne or rushing
+		var compensate_rotation_ = (directional_input.length_squared() < 0.1)
+		compensate_rotation_ = compensate_rotation_ or (current_state == State.AIRBORNE)
+		compensate_rotation_ = compensate_rotation_ or (current_state == State.RUSH)
+		if compensate_rotation_:
 			model_mount.rotate_y(-h_input)
 
 		var camera_rot = camera_mount.rotation_degrees
@@ -391,7 +524,7 @@ func _input(event):
 		elif v_input < -0.01:
 			if target_camera_localposition.y < cam_up_offset:
 				target_camera_localposition.y += increment
-				
+		
 		# Update camera x offset
 		if h_input > 0.01:
 			if target_camera_localposition.x < cam_side_offset:
@@ -399,6 +532,7 @@ func _input(event):
 		elif h_input < -0.01:
 			if target_camera_localposition.x > -cam_side_offset:
 				target_camera_localposition.x -= increment
+
 
 func make_model():
 	model_mount = Spatial.new()
@@ -543,61 +677,165 @@ func make_climb_ray():
 	climb_ray.set_enabled(true)
 	
 
-func make_gun():
-	gun_mount = Spatial.new()
-	add_child(gun_mount)
+func make_weapon():
+	weapon_mount = Spatial.new()
+	weapon_mount.set_translation(gun_mount_offset)
+	add_child(weapon_mount)
 	
 	aiming_ray = RayCast.new()
-	gun_mount.add_child(aiming_ray)
-	aiming_ray.set_cast_to(Vector3(0, 0, -200))
+	weapon_mount.add_child(aiming_ray)
+	aiming_ray.set_cast_to(Vector3(0, 0, -150))
 	aiming_ray.add_exception(self)
 	aiming_ray.set_collision_mask(6) # Collide with layers 2,3 : terrain+mobs
 	aiming_ray.set_enabled(true)
 	
+	# Pointer model
 	target_pointer = Spatial.new()
 	game_manager.add_child(target_pointer)
-	# Pointer model
 	var meshinstance = MeshInstance.new()
 	target_pointer.add_child(meshinstance)
 	meshinstance.mesh = SphereMesh.new()
+	pointer_mesh = meshinstance.mesh
 	meshinstance.mesh.set_radius(0.20)
 	meshinstance.mesh.set_height(0.60)
 	meshinstance.mesh.set_radial_segments(4)
 	meshinstance.mesh.set_rings(1)
 	meshinstance.set_translation(Vector3(0.0, 0.0, -0.30))
 	meshinstance.set_rotation_degrees(Vector3(-90.0, 0.0, 0.0))
-	meshinstance.mesh.set_material(mat_pointer_yellow)
-	
+	meshinstance.mesh.set_material(mat_pointer_green)
+	# knob model
+	pointer_knob = Spatial.new()
+	target_pointer.add_child(pointer_knob)
+	meshinstance = MeshInstance.new()
+	pointer_knob.add_child(meshinstance)
+	meshinstance.mesh = SphereMesh.new()	
+	knob_mesh = meshinstance.mesh
+	meshinstance.mesh.set_radius(0.15)
+	meshinstance.mesh.set_height(0.3)
+	meshinstance.mesh.set_radial_segments(4)
+	meshinstance.mesh.set_rings(1)
+	meshinstance.set_translation(Vector3(0.0, 0.0, -0.50))
+	meshinstance.set_rotation_degrees(Vector3(-90.0, 0.0, 0.0))
+	meshinstance.mesh.set_material(mat_pointer_red)
 
-func update_gun_pointer():
-	gun_mount.set_rotation(camera_mount.rotation)
+func config_weapon_gun():
+	weapon_mount.set_translation(gun_mount_offset)
+	aiming_ray.set_cast_to(Vector3(0, 0, -150))
+	aiming_ray.set_enabled(true)
+
+	is_aiming_gun = true
+
+func config_weapon_close_combat():
+	weapon_mount.set_translation(Vector3.ZERO)
+	var range_= collider_radius + RUSH_COLLIDER_RADIUS
+	aiming_ray.set_cast_to(Vector3(0, 0, -range_))
+	aiming_ray.set_enabled(true)
+	
+	if target_pointer.is_visible():
+		target_pointer.hide()
+	is_aiming_gun = false
+
+
+func update_weapon():
+		
+	if is_aiming_gun:
+		weapon_mount.set_rotation(camera_mount.rotation)
+		
 	if aiming_ray.is_colliding():
 		var point_ = aiming_ray.get_collision_point()
 		var normal_ = aiming_ray.get_collision_normal()
+		
 		target_pointer.look_at_from_position(point_, point_+normal_, Vector3(1,1,1.5))
-		if !target_pointer.is_visible():
+		if is_aiming_gun and !target_pointer.is_visible():
 			target_pointer.show()
+		
+		# Color code : close combat range
+		var target_range_squared_ = (point_ - translation).length_squared()
+		if target_range_squared_ < CLOSE_COMBAT_RANGE_SQUARED:
+			if !is_cc_range:
+				is_cc_range = true
+				knob_mesh.set_material(mat_pointer_green)
+		else:
+			if is_cc_range:
+				is_cc_range = false
+				knob_mesh.set_material(mat_pointer_red)
+		
+		# Color code : critical hit angle
+		var is_impact_angle_critical = aim_input.dot(-normal_) > 0.95 # Less than 30 degrees
+		if is_impact_angle_critical:
+			if !is_critical_hit:
+				is_critical_hit = true
+				pointer_mesh.set_material(mat_pointer_purple)
+		else:
+			if is_critical_hit:
+				is_critical_hit = false
+				pointer_mesh.set_material(mat_pointer_green)
+		
+		# Attack management
+		if can_attack:
+			if is_shoot_input:
+				can_attack = false
+				is_shoot_input = false
+				attacks_timer.set_wait_time(GUN_COOLDOWN)
+				attacks_timer.start()
+				var mf_pos = weapon_mount.get_global_transform().origin + aim_input
+				game_manager.add_muzzle_flash(mf_pos, aim_input)
+				game_manager.add_impact(point_, normal_)
+				var target = aiming_ray.get_collider()
+				var mult_ = 1
+				if is_critical_hit:
+					mult_ += 1
+				if target.has_method("take_bullet_damage"):
+					target.take_bullet_damage(mult_*BULLET_DAMAGE)
+				edit_energy(-BULLET_COST)
+			
+			if is_mortar_input:
+				can_attack = false
+				is_mortar_input = false
+				attacks_timer.set_wait_time(MORTAR_COOLDOWN)
+				attacks_timer.start()
+				var mf_pos = weapon_mount.get_global_transform().origin + aim_input
+				game_manager.add_muzzle_flash(mf_pos, aim_input + Vector3.UP)
+				game_manager.add_mortarshell(point_ + 0.1*normal_)
+				edit_energy(-MORTAR_COST)
+			
+			if is_rush_input and is_cc_range:
+				can_attack = false
+				is_processing_inputs = false
+				is_rush_input = false
+				
+				var terrain_hit = (aiming_ray.get_collider().get_collision_layer() == 2)
+				
+				if terrain_hit:
+					# Offset target position by half collider radius
+					rush_target_position = point_ + 0.5*normal_*collider_radius
+					print("terrain hit")
+				else:
+					rush_target_position = point_
+				
+				# temporary horizontal direction needed to focus. Updated at rush start
+				rush_start_position = self.translation
+				directional_input = rush_target_position - rush_start_position
+				directional_input.y = 0.0
+				edit_energy(-CLOSE_COMBAT_COST)
+								
+				current_state = State.FOCUS
+				config_weapon_close_combat()
+				
+				
+		if current_state == State.RUSH and is_rushing:
+			# Target detected, apply damage, switch to smash state
+			print("target found, hit target")
+			current_state = State.SMASH
+			is_rushing = false
+			var target = aiming_ray.get_collider()
+			if target.has_method("take_smashing_damage"):
+				target.take_smashing_damage(CLOSE_COMBAT_DAMAGE)
+	
+	
 	else:
 		if target_pointer.is_visible():
 			target_pointer.hide()
-
-func activate_aim():
-	aiming_ray.set_cast_to(Vector3(0, 0, -200))
-	aiming_ray.set_enabled(true)
-
-func activate_slam_ray():
-	gun_mount.set_rotation(model_mount.rotation)
-	aiming_ray.set_cast_to(Vector3(0, -2, -2))
-	aiming_ray.set_enabled(true)
-
-func activate_thrust_ray():
-	gun_mount.set_rotation(model_mount.rotation)
-	aiming_ray.set_cast_to(Vector3(0, 0, -3))
-	aiming_ray.set_enabled(true)
-
-func deactivate_aim():
-	aiming_ray.set_enabled(false)
-	target_pointer.hide()
 
 func make_rush_weapons():
 	pass
@@ -627,18 +865,53 @@ func on_regen_timer_timeout():
 func on_attacks_timer_timeout():
 	if !can_attack:
 		can_attack = true
+	if current_state == State.SHOCK:
+		is_aiming_gun = true
+		is_processing_inputs = true
+		
+		is_shock_started = false
+		# In case was shocked out of close combat sequence or dodge
+		is_rushing = false
+		is_smashing = false
+		is_dodge_started = false
+		shock_speed = Vector3.ZERO
+		current_state = State.AIRBORNE
+		
+		# Orient model
+		my_model.rotation = Vector3.ZERO
+		
+	if current_state == State.SMASH:
+		is_processing_inputs = true
+		
+		is_smashing = false
+		current_state = State.AIRBORNE
+		
+		# Orient model
+		my_model.rotation = Vector3.ZERO
+#		directional_input.y = 0.0
+#		my_model.look_at(translation + directional_input, Vector3.UP)
+		
+		config_weapon_gun()
 
 func take_bullet_damage(damage_):
-	pass
+	edit_health(-damage_)
 
-func take_explosion_damage(damage_, center):
-	pass
+func take_explosion_damage(damage_, center_):
+	edit_health(-damage_)
+	shock_speed += (self.translation - center_).normalized()*EXPLOSION_SPEED
+	shock_rot_axis = (Vector3.UP.cross(shock_speed)).normalized()
+	is_shock_started = false
+	current_state = State.SHOCK
+	
 
-func take_mauling_damage(damage_):
-	pass
+func take_smashing_damage(damage_, direction_):
+	edit_health(-damage_)
+	shock_speed += direction_.normalized()*SMASH_SPEED
+	is_shock_started = false
+	current_state = State.SHOCK
 
-func take_edgecore_damage(damage_, direction):
-	pass
+func take_edgecore_damage(damage_, direction_):
+	edit_health(-damage_)
 
 #for the mobs, rush attacks damage
 #func take_CC_damage(damage_, center):
