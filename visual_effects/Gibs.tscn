@@ -1,0 +1,55 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://visual_effects/Explosion.gd" type="Script" id=2]
+
+
+[sub_resource type="Gradient" id=4]
+colors = PoolColorArray( 0, 0, 0, 1, 0, 0, 0, 0 )
+
+[sub_resource type="GradientTexture" id=5]
+gradient = SubResource( 4 )
+
+[sub_resource type="ParticlesMaterial" id=1]
+resource_local_to_scene = true
+emission_shape = 1
+emission_sphere_radius = 0.5
+direction = Vector3( 0, 0.5, 1 )
+spread = 30.0
+gravity = Vector3( 0, -20, 0 )
+initial_velocity = 20.0
+initial_velocity_random = 0.8
+angular_velocity = 720.0
+angular_velocity_random = 1.0
+angle_random = 1.0
+scale_random = 1.0
+color_ramp = SubResource( 5 )
+
+[sub_resource type="SpatialMaterial" id=2]
+flags_transparent = true
+flags_unshaded = true
+flags_vertex_lighting = true
+flags_do_not_receive_shadows = true
+vertex_color_use_as_albedo = true
+params_billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="SphereMesh" id=3]
+material = SubResource( 2 )
+radius = 0.2
+height = 0.3
+radial_segments = 4
+rings = 1
+is_hemisphere = true
+
+[node name="Gibs" type="Particles"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 )
+emitting = false
+amount = 20
+one_shot = true
+explosiveness = 1.0
+process_material = SubResource( 1 )
+draw_pass_1 = SubResource( 3 )
+script = ExtResource( 2 )
+delay = 1.0

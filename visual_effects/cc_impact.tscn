@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://materials/fx_red.material" type="Material" id=1]
+[ext_resource path="res://visual_effects/cc_impact_mesh.glb" type="PackedScene" id=2]
+
+[node name="cc_impact_mesh" instance=ExtResource( 2 )]
+
+[node name="CCimpact" parent="." index="0"]
+transform = Transform( 0.2, 0, 0, 0, -8.74228e-09, -0.2, 0, 0.2, -8.74228e-09, 0, 0, 0 )
+material/0 = ExtResource( 1 )

@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://weapons/MortarBlast.gd" type="Script" id=1]
+[ext_resource path="res://materials/fx_cyan.material" type="Material" id=2]
+[ext_resource path="res://3D_models/Icosphere2div.tscn" type="PackedScene" id=3]
+
+[sub_resource type="SphereShape" id=1]
+margin = 0.2
+radius = 3.0
+
+[node name="MortarBlast" type="Area"]
+input_ray_pickable = false
+monitorable = false
+collision_mask = 7
+script = ExtResource( 1 )
+
+[node name="CollisionShape" type="CollisionShape" parent="."]
+shape = SubResource( 1 )
+
+[node name="Icosphere2div" parent="." instance=ExtResource( 3 )]
+transform = Transform( 6, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0 )
+material/0 = ExtResource( 2 )

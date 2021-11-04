@@ -1,0 +1,61 @@
+[gd_scene load_steps=10 format=2]
+
+[ext_resource path="res://sprites/circle128.png" type="Texture" id=1]
+[ext_resource path="res://visual_effects/TrailSmoke.gd" type="Script" id=2]
+
+[sub_resource type="Gradient" id=1]
+resource_local_to_scene = true
+offsets = PoolRealArray( 0, 0.118519, 0.42963, 1 )
+colors = PoolColorArray( 0, 1, 1, 1, 0.0470588, 0.0470588, 0.0470588, 0.545098, 0.118519, 0.118519, 0.118519, 1, 0, 0, 0, 0 )
+
+[sub_resource type="GradientTexture" id=2]
+gradient = SubResource( 1 )
+
+[sub_resource type="Curve" id=3]
+resource_local_to_scene = true
+_data = [ Vector2( 0, 0.445454 ), 0.0, 3.14205, 0, 0, Vector2( 0.240506, 0.772727 ), 0.662937, 0.662937, 0, 0, Vector2( 1, 0.981818 ), -0.110489, 0.0, 0, 0 ]
+
+[sub_resource type="CurveTexture" id=4]
+resource_local_to_scene = true
+curve = SubResource( 3 )
+
+[sub_resource type="ParticlesMaterial" id=5]
+resource_local_to_scene = true
+direction = Vector3( 0, 0, -1 )
+spread = 5.0
+gravity = Vector3( 0, 0, 0 )
+initial_velocity = 0.5
+scale_curve = SubResource( 4 )
+color_ramp = SubResource( 2 )
+
+[sub_resource type="SpatialMaterial" id=6]
+flags_transparent = true
+flags_unshaded = true
+flags_do_not_receive_shadows = true
+flags_disable_ambient_light = true
+vertex_color_use_as_albedo = true
+params_diffuse_mode = 4
+params_specular_mode = 4
+params_cull_mode = 2
+params_billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+albedo_texture = ExtResource( 1 )
+
+[sub_resource type="QuadMesh" id=7]
+resource_local_to_scene = true
+material = SubResource( 6 )
+
+[node name="Area" type="Area"]
+script = ExtResource( 2 )
+
+[node name="TrailSmoke" type="Particles" parent="."]
+emitting = false
+amount = 50
+lifetime = 2.0
+one_shot = true
+local_coords = false
+draw_order = 1
+process_material = SubResource( 5 )
+draw_pass_1 = SubResource( 7 )
